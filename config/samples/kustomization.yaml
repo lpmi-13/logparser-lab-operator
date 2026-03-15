@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+  - lab_learning_io_v1alpha1_logparserlab.yaml
+  # +kubebuilder:scaffold:manifestskustomizesamples

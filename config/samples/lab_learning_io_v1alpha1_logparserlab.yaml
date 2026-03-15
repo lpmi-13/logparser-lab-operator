@@ -1,0 +1,10 @@
+apiVersion: lab.learning.io/v1alpha1
+kind: LogParserLab
+metadata:
+  labels:
+    app.kubernetes.io/name: logparser-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: log-lab
+  namespace: log-lab
+spec:
+  activity: random

@@ -1,0 +1,101 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: logparserlabs.lab.learning.io
+spec:
+  group: lab.learning.io
+  names:
+    kind: LogParserLab
+    listKind: LogParserLabList
+    plural: logparserlabs
+    singular: logparserlab
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: LogParserLab is the Schema for the logparserlabs API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: LogParserLabSpec defines the desired state of LogParserLab.
+            properties:
+              activity:
+                description: |-
+                  Activity selects a fixed activity ID or "random".
+                  Empty values default to "random".
+                type: string
+              answerFile:
+                description: |-
+                  AnswerFile overrides the host-side answer file path.
+                  If empty, the operator uses /tmp/logparser-labs/<lab>/answer.txt.
+                type: string
+              logsDir:
+                description: |-
+                  LogsDir overrides the host-side directory where the operator writes the single active log file.
+                  Relative paths are resolved from the operator process working directory.
+                  If empty, the operator uses ./logs.
+                type: string
+            type: object
+          status:
+            description: LogParserLabStatus defines the observed state of LogParserLab.
+            properties:
+              answerFile:
+                type: string
+              completedActivities:
+                items:
+                  type: string
+                type: array
+              currentActivityID:
+                type: string
+              currentDataset:
+                type: string
+              currentLogPath:
+                type: string
+              currentTitle:
+                type: string
+              logsDir:
+                type: string
+              message:
+                type: string
+              outputFormat:
+                type: string
+              question:
+                type: string
+              round:
+                format: int32
+                type: integer
+              roundSeed:
+                format: int64
+                type: integer
+              state:
+                type: string
+              suggestedTools:
+                items:
+                  type: string
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
