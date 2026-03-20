@@ -31,21 +31,7 @@ require_kubectl_ready() {
 }
 
 cleanup_lab() {
-  kubectl delete logparserlab -n log-lab log-lab --ignore-not-found --timeout=20s >/dev/null 2>&1 || true
-  kubectl delete namespace log-lab --ignore-not-found --timeout=20s || true
-  if kubectl get namespace log-lab >/dev/null 2>&1; then
-    kubectl get namespace log-lab -o json | jq '.spec.finalizers = []' | kubectl replace --raw /api/v1/namespaces/log-lab/finalize -f - >/dev/null 2>&1 || true
-  fi
-  kubectl delete logparserlab test-lab --ignore-not-found --timeout=20s >/dev/null 2>&1 || true
-  kubectl delete namespace test-lab --ignore-not-found --timeout=20s >/dev/null 2>&1 || true
-  if kubectl get namespace test-lab >/dev/null 2>&1; then
-    kubectl get namespace test-lab -o json | jq '.spec.finalizers = []' | kubectl replace --raw /api/v1/namespaces/test-lab/finalize -f - >/dev/null 2>&1 || true
-  fi
-  rm -rf "${ANSWER_ROOT}/log-lab"
-  rm -rf "${ANSWER_ROOT}/test-lab"
-  if [[ -d "${LOGS_DIR}" ]]; then
-    find "${LOGS_DIR}" -maxdepth 1 -type f -name '*.log' -delete
-  fi
+  LOGS_DIR="${LOGS_DIR}" ANSWER_ROOT="${ANSWER_ROOT}" "${SCRIPT_DIR}/cleanup-k3s-resources.sh" --keep-crd
 }
 
 install_crds() {

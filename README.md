@@ -59,6 +59,28 @@ cat "${CURRENT_LOG}" | <your pipeline> > /tmp/logparser-labs/log-lab/answer.txt
 
 The operator checks the file continuously. If the answer is correct, the current round log is deleted, the next activity is selected automatically, and the answer file is reset.
 
+Clean up local lab state with:
+
+```sh
+./scripts/cleanup-k3s-resources.sh
+```
+
+This removes discovered `LogParserLab` resources, the lab namespaces, host-side answer directories under `/tmp/logparser-labs`, `.log` files from the managed logs directory, and any prior in-cluster operator namespace. By default it also deletes the `logparserlabs.lab.learning.io` CRD.
+
+If you want to keep the CRD installed for a faster rerun:
+
+```sh
+./scripts/cleanup-k3s-resources.sh --keep-crd
+```
+
+If you started the lab with a custom `LOGS_DIR` or `ANSWER_ROOT`, pass the same environment variables during cleanup:
+
+```sh
+LOGS_DIR=/path/to/logs ANSWER_ROOT=/path/to/answers ./scripts/cleanup-k3s-resources.sh --keep-crd
+```
+
+`./scripts/lab.sh reset` and `./scripts/lab.sh down` reuse the same cleanup logic and keep the CRD installed.
+
 ## Activity Catalog
 
 The lab includes 12 activity templates across four log families:
