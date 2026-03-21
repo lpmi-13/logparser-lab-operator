@@ -47,7 +47,7 @@ spec:
               answerFile:
                 description: |-
                   AnswerFile overrides the host-side answer file path.
-                  If empty, the operator uses /tmp/logparser-labs/<lab>/answer.txt.
+                  If empty, the operator uses /tmp/<lab>/answer.txt.
                 type: string
               logsDir:
                 description: |-

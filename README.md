@@ -8,15 +8,15 @@ Each round, the operator picks a random activity template from a catalog of 12 t
 
 ## How It Works
 
-The default local workflow is host-run, just like the reference operator:
+The default local workflow is host-run:
 
-1. Start a Kubernetes cluster.
+1. Start a Kubernetes cluster (k3s is simple and works).
 2. Install the CRD and seed a `LogParserLab` resource in namespace `log-lab`.
 3. Run the operator on the host.
-4. Solve each challenge by running shell pipelines directly against the current round log file and redirecting stdout into `/tmp/logparser-labs/<lab>/answer.txt`.
+4. Solve each challenge by running shell pipelines directly against the current round log file and redirecting stdout into `/tmp/<lab>/answer.txt`.
 5. Watch progress in the browser notification feed on `http://localhost:8888`.
 
-The operator tracks answers in host files under `/tmp/logparser-labs` by default.
+The operator tracks answers in host files under `/tmp/<lab>` by default.
 
 ## Example Flow
 
@@ -26,10 +26,10 @@ Start the lab:
 ./scripts/lab.sh up
 ```
 
-If `8888` is already in use:
+If you want to specify a different notifications UI port, maybe because `8888` is already in use:
 
 ```sh
-NOTIFICATION_PORT=8890 ./scripts/lab.sh up
+NOTIFICATION_PORT=9000 ./scripts/lab.sh up
 ```
 
 If you want a different on-disk location for the generated round log:
@@ -54,10 +54,10 @@ Solve it from your shell:
 
 ```sh
 CURRENT_LOG="$(kubectl get logparserlab -n log-lab log-lab -o jsonpath='{.status.currentLogPath}')"
-cat "${CURRENT_LOG}" | <your pipeline> > /tmp/logparser-labs/log-lab/answer.txt
+cat "${CURRENT_LOG}" | <your pipeline> > /tmp/log-lab/answer.txt
 ```
 
-The operator checks the file continuously. If the answer is correct, the current round log is deleted, the next activity is selected automatically, and the answer file is reset.
+The operator checks the file continuously. If the answer is correct, the notifications browser tab will tell you, the current round log is deleted, the next activity is selected automatically, and the answer file is reset along with a message that the next activity is ready and what to do.
 
 Clean up local lab state with:
 
@@ -65,7 +65,7 @@ Clean up local lab state with:
 ./scripts/cleanup-k3s-resources.sh
 ```
 
-This removes discovered `LogParserLab` resources, the lab namespaces, host-side answer directories under `/tmp/logparser-labs`, `.log` files from the managed logs directory, and any prior in-cluster operator namespace. By default it also deletes the `logparserlabs.lab.learning.io` CRD.
+This removes discovered `LogParserLab` resources, the lab namespaces, host-side answer directories like `/tmp/log-lab`, `.log` files from the managed logs directory, and any prior in-cluster operator namespace. By default it also deletes the `logparserlabs.lab.learning.io` CRD.
 
 If you want to keep the CRD installed for a faster rerun:
 

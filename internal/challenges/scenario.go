@@ -260,12 +260,25 @@ func prepareApacheStatusUniqueIPs(activity Activity, seed int64) (Scenario, erro
 		records = append(records, record)
 	}
 
-	return newAccessScenario(activity, "apache_access.log",
+	scenario := newAccessScenario(activity, "apache_access.log",
 		fmt.Sprintf("How many unique client IPs received a %d response for paths under %s during the %s hour in apache_access.log?", status, prefix, hourWindow(hour)),
 		"Write only the number.",
 		strconv.Itoa(uniqueCount),
 		records,
-	), nil
+	)
+	scenario.Title = apacheStatusSourceTitle(activity.Title, status)
+	return scenario, nil
+}
+
+func apacheStatusSourceTitle(defaultTitle string, status int) string {
+	switch status / 100 {
+	case 4:
+		return "Count 4XX Sources"
+	case 5:
+		return "Count 5XX Sources"
+	default:
+		return defaultTitle
+	}
 }
 
 func prepareApacheTopDownloads(activity Activity, seed int64) (Scenario, error) {

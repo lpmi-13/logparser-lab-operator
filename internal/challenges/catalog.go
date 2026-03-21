@@ -42,7 +42,7 @@ func (s Scenario) InstructionSummary() string {
 	if s.InstructionHint != "" {
 		parts = append(parts, s.InstructionHint)
 	}
-	return strings.Join(parts, " ")
+	return strings.Join(parts, "\n")
 }
 
 // WriteLog writes the generated scenario log file into the managed logs directory.
@@ -74,7 +74,7 @@ var catalog = []Activity{
 	},
 	{
 		ID:             "apache-404-unique-ips",
-		Title:          "Count 404 Sources",
+		Title:          "Count Error Sources",
 		SuggestedTools: []string{"grep", "awk", "sort", "uniq", "wc"},
 	},
 	{

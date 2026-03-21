@@ -11,7 +11,7 @@ OPERATOR_NAMESPACE="logparser-operator-system"
 DELETE_CRD=1
 FAILURES=0
 LOGS_DIR_RAW="${LOGS_DIR:-${REPO_ROOT}/logs}"
-ANSWER_ROOT_RAW="${ANSWER_ROOT:-/tmp/logparser-labs}"
+ANSWER_ROOT_RAW="${ANSWER_ROOT:-/tmp}"
 
 declare -A SEEN_LAB_NAMES=()
 declare -A SEEN_NAMESPACES=()
@@ -61,7 +61,7 @@ Usage:
 
 Environment:
   LOGS_DIR     Override the managed logs directory. Default: <repo>/logs
-  ANSWER_ROOT  Override the answer root path. Default: /tmp/logparser-labs
+  ANSWER_ROOT  Override the answer root path. Default: /tmp (so the default answer file becomes /tmp/<lab>/answer.txt)
 
 Options:
   --lab-name NAME  Additional lab name/namespace to clean. May be repeated.

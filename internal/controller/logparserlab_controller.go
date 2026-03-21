@@ -109,11 +109,11 @@ func (r *LogParserLabReconciler) initializeLab(ctx context.Context, lab *labv1al
 	}
 
 	nextRound := lab.Status.Round + 1
-	challengeText := r.renderChallengeText(nextRound, answerPath, currentLogPath, scenario)
+	challengeText := r.renderChallengeText(answerPath, currentLogPath, scenario)
 
 	if err := r.updateStatusWithRetry(ctx, lab, func(l *labv1alpha1.LogParserLab) {
 		l.Status.CurrentActivityID = activity.ID
-		l.Status.CurrentTitle = activity.Title
+		l.Status.CurrentTitle = scenario.Title
 		l.Status.CurrentDataset = scenario.LogName
 		l.Status.Question = scenario.Question
 		l.Status.OutputFormat = scenario.OutputFormat
@@ -280,22 +280,15 @@ func (r *LogParserLabReconciler) failLab(ctx context.Context, lab *labv1alpha1.L
 	return ctrl.Result{}, err
 }
 
-func (r *LogParserLabReconciler) renderChallengeText(round int32, answerPath, currentLogPath string, scenario challenges.Scenario) string {
+func (r *LogParserLabReconciler) renderChallengeText(answerPath, currentLogPath string, scenario challenges.Scenario) string {
 	return strings.Join([]string{
-		fmt.Sprintf("Round %d: %s", round, scenario.Title),
-		"",
-		scenario.Question,
 		fmt.Sprintf("Log file: %s", currentLogPath),
-		fmt.Sprintf("Output format: %s", scenario.OutputFormat),
-		fmt.Sprintf("Suggested tools: %s", strings.Join(scenario.SuggestedTools, ", ")),
 		fmt.Sprintf("Answer file: %s", answerPath),
 		"",
-		"Only the current round log exists in the managed logs directory.",
-		"Run your pipeline directly on the VM filesystem, for example:",
+		"Run your pipeline directly on the VM filesystem and redirect stdout to the answer file:",
 		fmt.Sprintf("cat %s | <your pipeline> > %s", currentLogPath, answerPath),
 	}, "\n")
 }
-
 func (r *LogParserLabReconciler) ensureActiveScenario(lab *labv1alpha1.LogParserLab, activity challenges.Activity) (challenges.Scenario, string, error) {
 	scenario, err := challenges.Prepare(activity, lab.Status.RoundSeed)
 	if err != nil {

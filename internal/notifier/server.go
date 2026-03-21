@@ -213,7 +213,17 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
     }
 
     .summary-text {
+      display: grid;
+      gap: 6px;
       line-height: 1.5;
+    }
+
+    .summary-line {
+      display: block;
+    }
+
+    .summary-key {
+      font-weight: 700;
     }
 
     @keyframes slide-in {
@@ -231,7 +241,6 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
   <main class="shell">
     <section class="hero">
       <h1>Log Parser Lab</h1>
-      <p>Watch for new activities, successful submissions, and automatic resets while you solve each prompt with standard Linux text-processing tools.</p>
     </section>
     <section class="statusbar">
       <div class="pill"><span id="indicator" class="dot"></span><span id="status">Connecting to event stream...</span></div>
@@ -281,6 +290,49 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
       statusNode.textContent = 'Connected';
     };
 
+    function formatKind(kind) {
+      switch (kind) {
+        case 'setup': return 'Preparing';
+        case 'ready': return 'Ready';
+        case 'attempt': return 'Checked answer';
+        case 'completed': return 'Completed';
+        case 'reset': return 'Resetting';
+        case 'error': return 'Error';
+        default:
+          return kind ? kind.charAt(0).toUpperCase() + kind.slice(1) : '';
+      }
+    }
+
+    function renderInstructionSummary(summary) {
+      const fragment = document.createDocumentFragment();
+      const lines = (summary || '').split('\n').map((line) => line.trim()).filter(Boolean);
+
+      for (const line of lines) {
+        const row = document.createElement('div');
+        row.className = 'summary-line';
+
+        if (line.startsWith('Output: ')) {
+          const key = document.createElement('strong');
+          key.className = 'summary-key';
+          key.textContent = 'Output:';
+          row.appendChild(key);
+          row.appendChild(document.createTextNode(' ' + line.slice('Output: '.length)));
+        } else if (line.startsWith('Suggested tools: ')) {
+          const key = document.createElement('strong');
+          key.className = 'summary-key';
+          key.textContent = 'Suggested Tools:';
+          row.appendChild(key);
+          row.appendChild(document.createTextNode(' ' + line.slice('Suggested tools: '.length)));
+        } else {
+          row.textContent = line;
+        }
+
+        fragment.appendChild(row);
+      }
+
+      return fragment;
+    }
+
     eventSource.onmessage = (event) => {
       const payload = JSON.parse(event.data);
       const article = document.createElement('article');
@@ -289,7 +341,7 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
 
       const meta = document.createElement('div');
       meta.className = 'meta';
-      meta.textContent = [new Date().toLocaleTimeString(), payload.lab, payload.kind, payload.activityId].filter(Boolean).join('  •  ');
+      meta.textContent = [new Date().toLocaleTimeString(), formatKind(payload.kind)].filter(Boolean).join('  •  ');
 
       const message = document.createElement('div');
       message.className = 'message';
@@ -306,7 +358,7 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
 
         const text = document.createElement('div');
         text.className = 'summary-text';
-        text.textContent = payload.instructionSummary;
+        text.appendChild(renderInstructionSummary(payload.instructionSummary));
 
         summary.appendChild(label);
         summary.appendChild(text);
@@ -322,7 +374,7 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
       if (document.hidden) {
         startFlash();
         if ('Notification' in window && Notification.permission === 'granted') {
-          const notificationTitle = payload.activityId ? 'Log Parser Lab: ' + payload.activityId : 'Log Parser Lab';
+          const notificationTitle = formatKind(payload.kind) ? 'Log Parser Lab: ' + formatKind(payload.kind) : 'Log Parser Lab';
           const notificationBody = [firstLine(payload.message), payload.instructionSummary].filter(Boolean).join('\n');
           const n = new Notification(notificationTitle, { body: notificationBody || payload.message });
           n.onclick = () => {
@@ -342,6 +394,8 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
 </html>`
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
+	w.Header().Set("Pragma", "no-cache")
 	_, _ = w.Write([]byte(html))
 }
 
@@ -353,7 +407,8 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
+	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
 	eventCh, cleanup := s.notifier.Subscribe()

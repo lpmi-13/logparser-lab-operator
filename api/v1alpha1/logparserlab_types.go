@@ -24,7 +24,7 @@ type LogParserLabSpec struct {
 	// +optional
 	LogsDir string `json:"logsDir,omitempty"`
 	// AnswerFile overrides the host-side answer file path.
-	// If empty, the operator uses /tmp/logparser-labs/<lab>/answer.txt.
+	// If empty, the operator uses /tmp/<lab>/answer.txt.
 	// +optional
 	AnswerFile string `json:"answerFile,omitempty"`
 }

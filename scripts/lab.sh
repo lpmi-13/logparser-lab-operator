@@ -4,8 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 LOGS_DIR="${LOGS_DIR:-${REPO_ROOT}/logs}"
-ANSWER_ROOT="${ANSWER_ROOT:-/tmp/logparser-labs}"
+ANSWER_ROOT="${ANSWER_ROOT:-/tmp}"
 NOTIFICATION_PORT="${NOTIFICATION_PORT:-8888}"
+HEALTH_PROBE_BIND_ADDRESS="${HEALTH_PROBE_BIND_ADDRESS:-0}"
 export GOCACHE="${GOCACHE:-/tmp/logparser-operator-go-build}"
 export GOPATH="${GOPATH:-/tmp/logparser-operator-gopath}"
 export GOMODCACHE="${GOMODCACHE:-/tmp/logparser-operator-gomod}"
@@ -18,8 +19,9 @@ Usage:
 
 Environment:
   LOGS_DIR           Override the logs directory. Default: <repo>/logs
-  ANSWER_ROOT        Override the answer root path. Default: /tmp/logparser-labs
+  ANSWER_ROOT        Override the answer root path. Default: /tmp (so the default answer file becomes /tmp/<lab>/answer.txt)
   NOTIFICATION_PORT  Override the notification UI port. Default: 8888
+  HEALTH_PROBE_BIND_ADDRESS  Override the controller health probe bind address. Default: 0 (disabled for local lab runs)
 USAGE
 }
 
@@ -63,7 +65,7 @@ run_operator_foreground() {
   echo "Starting operator locally with answer root ${ANSWER_ROOT}"
   echo "Logs directory: ${LOGS_DIR}"
   echo "Notification feed: http://localhost:${NOTIFICATION_PORT}"
-  (cd "${REPO_ROOT}" && go run ./cmd/main.go --logs-dir="${LOGS_DIR}" --answer-root="${ANSWER_ROOT}" --notification-port="${NOTIFICATION_PORT}")
+  (cd "${REPO_ROOT}" && go run ./cmd/main.go --logs-dir="${LOGS_DIR}" --answer-root="${ANSWER_ROOT}" --notification-port="${NOTIFICATION_PORT}" --health-probe-bind-address="${HEALTH_PROBE_BIND_ADDRESS}")
 }
 
 case "${CMD}" in

@@ -63,7 +63,7 @@ spec:
           args:
             - --leader-elect
             - --health-probe-bind-address=:8081
-            - --answer-root=/tmp/logparser-labs
+            - --answer-root=/tmp
           image: controller:latest
           name: manager
           ports:
@@ -101,12 +101,12 @@ spec:
               cpu: 10m
               memory: 64Mi
           volumeMounts:
-            - mountPath: /tmp/logparser-labs
+            - mountPath: /tmp
               name: answer-root
       volumes:
         - name: answer-root
           hostPath:
-            path: /tmp/logparser-labs
+            path: /tmp
             type: DirectoryOrCreate
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

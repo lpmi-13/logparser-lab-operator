@@ -2,6 +2,8 @@ package challenges
 
 import (
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -15,7 +17,7 @@ func TestScenarioInstructionSummary(t *testing.T) {
 	}
 
 	got := scenario.InstructionSummary()
-	want := "How many unique client IP addresses requested paths under /api/v1/ during the 14:00-14:59 hour in apache_access.log? Output: Write only the number. Suggested tools: grep, awk, sort, uniq, wc Only the current round log file exists."
+	want := "How many unique client IP addresses requested paths under /api/v1/ during the 14:00-14:59 hour in apache_access.log?\nOutput: Write only the number.\nSuggested tools: grep, awk, sort, uniq, wc\nOnly the current round log file exists."
 
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
@@ -60,6 +62,53 @@ func TestPrepareAllActivitiesProduceLargeSingleLog(t *testing.T) {
 		if len(scenario.Lines) != DefaultScenarioLineCount {
 			t.Fatalf("Prepare(%s) generated %d lines, want %d", activity.ID, len(scenario.Lines), DefaultScenarioLineCount)
 		}
+	}
+}
+
+func TestPrepareApacheStatusUniqueIPsUsesStatusFamilyTitle(t *testing.T) {
+	activity, ok := Lookup("apache-404-unique-ips")
+	if !ok {
+		t.Fatal("expected apache-404-unique-ips to exist")
+	}
+
+	statusPattern := regexp.MustCompile(`received a (\d+) response`)
+	seen4XX := false
+	seen5XX := false
+
+	for seed := int64(1); seed <= 512 && (!seen4XX || !seen5XX); seed++ {
+		scenario, err := Prepare(activity, seed)
+		if err != nil {
+			t.Fatalf("Prepare returned error for seed %d: %v", seed, err)
+		}
+
+		matches := statusPattern.FindStringSubmatch(scenario.Question)
+		if len(matches) != 2 {
+			t.Fatalf("expected question to contain an HTTP status, got %q", scenario.Question)
+		}
+
+		status, err := strconv.Atoi(matches[1])
+		if err != nil {
+			t.Fatalf("Atoi(%q) returned error: %v", matches[1], err)
+		}
+
+		switch status / 100 {
+		case 4:
+			seen4XX = true
+			if scenario.Title != "Count 4XX Sources" {
+				t.Fatalf("expected 4xx scenario title to be Count 4XX Sources, got %q", scenario.Title)
+			}
+		case 5:
+			seen5XX = true
+			if scenario.Title != "Count 5XX Sources" {
+				t.Fatalf("expected 5xx scenario title to be Count 5XX Sources, got %q", scenario.Title)
+			}
+		default:
+			t.Fatalf("expected 4xx or 5xx status, got %d", status)
+		}
+	}
+
+	if !seen4XX || !seen5XX {
+		t.Fatalf("expected seeds to produce both 4xx and 5xx variants, got 4xx=%t 5xx=%t", seen4XX, seen5XX)
 	}
 }
 

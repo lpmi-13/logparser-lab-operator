@@ -69,6 +69,7 @@ CONTAINER_TOOL ?= docker
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
+ARGS ?= --health-probe-bind-address=0
 
 .PHONY: all
 all: build

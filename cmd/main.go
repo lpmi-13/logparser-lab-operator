@@ -56,7 +56,7 @@ func main() {
 	flag.BoolVar(&enableNotifications, "enable-notifications", true, "Enable the browser notification feed.")
 	flag.IntVar(&notificationPort, "notification-port", 8888, "Port for the notification SSE server.")
 	flag.StringVar(&logsDir, "logs-dir", "./logs", "Host path where the operator writes the single active round log.")
-	flag.StringVar(&answerRoot, "answer-root", "/tmp/logparser-labs", "Host path used for answer files.")
+	flag.StringVar(&answerRoot, "answer-root", "/tmp", "Host path used as the parent directory for default answer files.")
 
 	opts := zap.Options{Development: true}
 	opts.BindFlags(flag.CommandLine)
