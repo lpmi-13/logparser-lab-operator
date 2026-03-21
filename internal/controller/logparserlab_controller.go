@@ -163,7 +163,7 @@ func (r *LogParserLabReconciler) checkSubmission(ctx context.Context, lab *labv1
 	if !ok {
 		return r.failLab(ctx, lab, fmt.Errorf("activity %q not found", lab.Status.CurrentActivityID))
 	}
-	scenario, currentLogPath, err := r.ensureActiveScenario(lab, activity)
+	scenario, _, err := r.ensureActiveScenario(lab, activity)
 	if err != nil {
 		return r.failLab(ctx, lab, err)
 	}
@@ -196,21 +196,13 @@ func (r *LogParserLabReconciler) checkSubmission(ctx context.Context, lab *labv1
 			return r.failLab(ctx, lab, fmt.Errorf("clean log workspace: %w", err))
 		}
 
-		r.sendScenarioEvent(labKey, "completed", fmt.Sprintf(
-			"Correct.\nRound %d (%s) is complete.\nResetting the answer file and selecting the next activity.",
-			lab.Status.Round,
-			activity.ID,
-		), scenario)
+		r.sendScenarioEvent(labKey, "completed", r.renderCompletedText(), scenario)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	if answer != r.lastSubmitted(labKey) {
 		r.setLastSubmission(labKey, answer)
-		r.sendScenarioChangeEvent(labKey, "attempt", fmt.Sprintf(
-			"Checked %s against %s, but the output is not correct yet.",
-			answerPath,
-			currentLogPath,
-		), scenario)
+		r.sendScenarioChangeEvent(labKey, "attempt", r.renderIncorrectAnswerText(answerPath), scenario)
 	}
 
 	return ctrl.Result{RequeueAfter: 3 * time.Second}, nil
@@ -286,9 +278,20 @@ func (r *LogParserLabReconciler) renderChallengeText(answerPath, currentLogPath 
 		fmt.Sprintf("Answer file: %s", answerPath),
 		"",
 		"Run your pipeline directly on the VM filesystem and redirect stdout to the answer file:",
+		"```sh",
 		fmt.Sprintf("cat %s | <your pipeline> > %s", currentLogPath, answerPath),
+		"```",
 	}, "\n")
 }
+
+func (r *LogParserLabReconciler) renderIncorrectAnswerText(answerPath string) string {
+	return fmt.Sprintf("Checked %s, but the output is not correct yet.", answerPath)
+}
+
+func (r *LogParserLabReconciler) renderCompletedText() string {
+	return "Correct.\nResetting the answer file and selecting the next activity."
+}
+
 func (r *LogParserLabReconciler) ensureActiveScenario(lab *labv1alpha1.LogParserLab, activity challenges.Activity) (challenges.Scenario, string, error) {
 	scenario, err := challenges.Prepare(activity, lab.Status.RoundSeed)
 	if err != nil {
@@ -467,7 +470,7 @@ func (r *LogParserLabReconciler) sendScenarioEvent(labKey, kind, message string,
 		Kind:               kind,
 		ChallengeID:        r.challengeID(labKey),
 		ActivityID:         scenario.ActivityID,
-		InstructionSummary: scenario.InstructionSummary(),
+		InstructionSummary: r.instructionSummaryForEvent(kind, scenario),
 		Lab:                labKey,
 	})
 }
@@ -483,6 +486,13 @@ func (r *LogParserLabReconciler) sendChangeEvent(labKey, kind, message, activity
 		ActivityID:  activityID,
 		Lab:         labKey,
 	})
+}
+
+func (r *LogParserLabReconciler) instructionSummaryForEvent(kind string, scenario challenges.Scenario) string {
+	if kind == "completed" {
+		return ""
+	}
+	return scenario.InstructionSummary()
 }
 
 func (r *LogParserLabReconciler) sendScenarioChangeEvent(labKey, kind, message string, scenario challenges.Scenario) {

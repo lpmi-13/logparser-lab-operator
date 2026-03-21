@@ -10,6 +10,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+const notifierFaviconDataURL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgIDxyZWN0IHg9IjIwIiB5PSIxOCIgd2lkdGg9IjM0IiBoZWlnaHQ9IjI4IiByeD0iMTQiIGZpbGw9IiM4QjVBMkIiIHN0cm9rZT0iIzVBMzQxNiIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgICA8cGF0aCBkPSJNMjggMjNjMyAxIDUgMSA4IDBtLTggN2M0IDEgOCAxIDEyIDBtLTEyIDhjNSAxIDEwIDEgMTYgMCIgc3Ryb2tlPSIjNkQ0MzIwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iMyIgb3BhY2l0eT0iLjkiLz4KICAgIDxlbGxpcHNlIGN4PSIyMiIgY3k9IjMyIiByeD0iMTQiIHJ5PSIxNCIgZmlsbD0iI0UxQjA2QSIgc3Ryb2tlPSIjNUEzNDE2IiBzdHJva2Utd2lkdGg9IjMiLz4KICAgIDxlbGxpcHNlIGN4PSIyMiIgY3k9IjMyIiByeD0iOSIgcnk9IjkiIGZpbGw9IiNGMEM5ODciIHN0cm9rZT0iIzdDNEQyNSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgICA8ZWxsaXBzZSBjeD0iMjIiIGN5PSIzMiIgcng9IjQuNSIgcnk9IjQuNSIgZmlsbD0iI0UxQjA2QSIgc3Ryb2tlPSIjOUQ2NTMwIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgIDxjaXJjbGUgY3g9IjQxIiBjeT0iMzEiIHI9IjMuMiIgZmlsbD0iIzZENDMyMCIgb3BhY2l0eT0iLjg1Ii8+CiAgICA8cGF0aCBkPSJNNDggMThjNCAyIDggNyA4IDE0cy00IDEyLTggMTQiIHN0cm9rZT0iI0E0NkIzNyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjIuNiIvPgogIDwvZz4KPC9zdmc+"
+
 // Server implements manager.Runnable to serve SSE notifications.
 type Server struct {
 	notifier *Notifier
@@ -23,6 +25,24 @@ func NewServer(notifier *Notifier, port int) *Server {
 		notifier: notifier,
 		port:     port,
 	}
+}
+
+func setCommonHeaders(w http.ResponseWriter) {
+	headers := w.Header()
+	headers.Set("Cache-Control", "no-store, max-age=0")
+	headers.Set("Pragma", "no-cache")
+}
+
+func setDocumentHeaders(w http.ResponseWriter) {
+	setCommonHeaders(w)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+}
+
+func setEventStreamHeaders(w http.ResponseWriter) {
+	setCommonHeaders(w)
+	headers := w.Header()
+	headers.Set("Content-Type", "text/event-stream")
+	headers.Set("Connection", "keep-alive")
 }
 
 // Start implements manager.Runnable.
@@ -66,6 +86,7 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Log Parser Lab</title>
+  <link rel="icon" type="image/svg+xml" href="` + notifierFaviconDataURL + `">
   <style>
     :root {
       --bg: #f5efe4;
@@ -192,8 +213,29 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
     }
 
     .message {
-      white-space: pre-wrap;
+      display: grid;
+      gap: 12px;
       line-height: 1.5;
+    }
+
+    .message-copy {
+      white-space: pre-wrap;
+    }
+
+    .message-code {
+      margin: 0;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(75, 92, 82, 0.18);
+      background: rgba(86, 99, 87, 0.12);
+      color: var(--ink);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .message-code code {
+      font-family: "IBM Plex Mono", "Fira Code", monospace;
+      font-size: 0.98rem;
     }
 
     .summary {
@@ -206,8 +248,9 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
 
     .summary-label {
       margin-bottom: 6px;
-      color: var(--muted);
+      color: var(--ink);
       font-size: 0.75rem;
+      font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
@@ -333,6 +376,66 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
       return fragment;
     }
 
+    function renderMessageContent(message) {
+      const fragment = document.createDocumentFragment();
+      const lines = (message || '').split('\n');
+      const fence = String.fromCharCode(96).repeat(3);
+      let prose = [];
+      let code = [];
+      let inCode = false;
+
+      function flushProse() {
+        const text = prose.join('\n').trim();
+        prose = [];
+        if (!text) return;
+
+        const block = document.createElement('div');
+        block.className = 'message-copy';
+        block.textContent = text;
+        fragment.appendChild(block);
+      }
+
+      function flushCode() {
+        const text = code.join('\n').trim();
+        code = [];
+        if (!text) return;
+
+        const pre = document.createElement('pre');
+        pre.className = 'message-code';
+
+        const codeNode = document.createElement('code');
+        codeNode.textContent = text;
+        pre.appendChild(codeNode);
+        fragment.appendChild(pre);
+      }
+
+      for (const line of lines) {
+        if (line.startsWith(fence)) {
+          if (inCode) {
+            flushCode();
+          } else {
+            flushProse();
+          }
+          inCode = !inCode;
+          continue;
+        }
+
+        if (inCode) {
+          code.push(line);
+        } else {
+          prose.push(line);
+        }
+      }
+
+      if (inCode) {
+        flushCode();
+      } else {
+        flushProse();
+      }
+
+      return fragment;
+    }
+
     eventSource.onmessage = (event) => {
       const payload = JSON.parse(event.data);
       const article = document.createElement('article');
@@ -345,7 +448,7 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
 
       const message = document.createElement('div');
       message.className = 'message';
-      message.textContent = payload.message;
+      message.appendChild(renderMessageContent(payload.message));
 
       article.appendChild(meta);
       if (payload.instructionSummary) {
@@ -393,9 +496,7 @@ func (s *Server) handleRoot(w http.ResponseWriter, _ *http.Request) {
 </body>
 </html>`
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store, max-age=0")
-	w.Header().Set("Pragma", "no-cache")
+	setDocumentHeaders(w)
 	_, _ = w.Write([]byte(html))
 }
 
@@ -406,10 +507,7 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-store, max-age=0")
-	w.Header().Set("Pragma", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
+	setEventStreamHeaders(w)
 
 	eventCh, cleanup := s.notifier.Subscribe()
 	defer cleanup()

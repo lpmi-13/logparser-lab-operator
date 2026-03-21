@@ -9,6 +9,44 @@ import (
 	"time"
 )
 
+func assertNoStoreHeaders(t *testing.T, headers map[string][]string) {
+	t.Helper()
+
+	checks := map[string]string{
+		"Cache-Control": "no-store, max-age=0",
+		"Pragma":        "no-cache",
+	}
+
+	for name, want := range checks {
+		values := headers[name]
+		got := ""
+		if len(values) > 0 {
+			got = values[0]
+		}
+		if got != want {
+			t.Fatalf("expected %s header %q, got %q", name, want, got)
+		}
+	}
+}
+
+func assertSecurityHeadersUnset(t *testing.T, headers map[string][]string) {
+	t.Helper()
+
+	for _, name := range []string{
+		"Content-Security-Policy",
+		"Referrer-Policy",
+		"X-Content-Type-Options",
+		"X-Frame-Options",
+		"Cross-Origin-Opener-Policy",
+		"Cross-Origin-Resource-Policy",
+		"Permissions-Policy",
+	} {
+		if values := headers[name]; len(values) > 0 && values[0] != "" {
+			t.Fatalf("expected %s to be unset, got %q", name, values[0])
+		}
+	}
+}
+
 func TestHandleEventsSetsNoStoreHeaders(t *testing.T) {
 	n := New()
 	s := NewServer(n, 8888)
@@ -39,12 +77,8 @@ func TestHandleEventsSetsNoStoreHeaders(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	if got := rec.Header().Get("Cache-Control"); got != "no-store, max-age=0" {
-		t.Fatalf("expected Cache-Control header %q, got %q", "no-store, max-age=0", got)
-	}
-	if got := rec.Header().Get("Pragma"); got != "no-cache" {
-		t.Fatalf("expected Pragma header %q, got %q", "no-cache", got)
-	}
+	assertNoStoreHeaders(t, rec.Header())
+	assertSecurityHeadersUnset(t, rec.Header())
 
 	cancel()
 	select {
@@ -140,12 +174,8 @@ func TestHandleRootUsesHumanFriendlyNotificationChrome(t *testing.T) {
 
 	s.handleRoot(rec, req)
 
-	if got := rec.Header().Get("Cache-Control"); got != "no-store, max-age=0" {
-		t.Fatalf("expected Cache-Control header %q, got %q", "no-store, max-age=0", got)
-	}
-	if got := rec.Header().Get("Pragma"); got != "no-cache" {
-		t.Fatalf("expected Pragma header %q, got %q", "no-cache", got)
-	}
+	assertNoStoreHeaders(t, rec.Header())
+	assertSecurityHeadersUnset(t, rec.Header())
 
 	body := rec.Body.String()
 	checks := []struct {
@@ -153,12 +183,22 @@ func TestHandleRootUsesHumanFriendlyNotificationChrome(t *testing.T) {
 		want   bool
 	}{
 		{needle: "payload.instructionSummary", want: true},
+		{needle: "rel=\"icon\"", want: true},
+		{needle: "data:image/svg+xml;base64,", want: true},
 		{needle: "Activity summary", want: true},
+		{needle: "color: var(--ink);", want: true},
+		{needle: "font-weight: 800;", want: true},
 		{needle: "Watch for new activities, successful submissions, and automatic resets while you solve each prompt with standard Linux text-processing tools.", want: false},
 		{needle: "function formatKind(kind)", want: true},
 		{needle: "function renderInstructionSummary(summary)", want: true},
+		{needle: "function renderMessageContent(message)", want: true},
+		{needle: "message-code", want: true},
+		{needle: "white-space: pre-wrap;", want: true},
+		{needle: "overflow-wrap: anywhere;", want: true},
+		{needle: "overflow-x: auto;", want: false},
 		{needle: "summary-key", want: true},
 		{needle: "Suggested Tools:", want: true},
+		{needle: "message.appendChild(renderMessageContent(payload.message))", want: true},
 		{needle: "payload.lab", want: false},
 		{needle: "payload.activityId].filter(Boolean)", want: false},
 		{needle: "Log Parser Lab: ' + payload.activityId", want: false},
