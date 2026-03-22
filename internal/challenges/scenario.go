@@ -3,9 +3,11 @@ package challenges
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -53,21 +55,188 @@ var (
 		"users", "orders", "sessions", "health", "metrics", "invoices", "roles", "tokens", "alerts",
 	}
 	authUsers = []string{
-		"alice", "bob", "carol", "dana", "deploy", "backup", "monitor", "ops", "ubuntu", "admin", "svc-ci", "jenkins",
+		"alice", "bob", "carol", "dana", "monitor", "ops", "admin",
 	}
+	authServiceUsers = []string{"deploy", "backup", "svc-ci"}
+	authInvalidUsers = []string{"jenkins", "ubuntu", "oracle", "postgres", "git", "test", "ftp", "www-data"}
+	authMFAUsers     = []string{"alice", "admin", "ops"}
+	authSSHClients   = []string{
+		"OpenSSH_8.9p1 Ubuntu-3ubuntu0.10",
+		"OpenSSH_9.6p1 Debian-3",
+		"paramiko_3.4.0",
+		"libssh-0.10.6",
+		"PuTTY_Release_0.81",
+	}
+	authBotSubnets = [][3]int{
+		{198, 51, 100},
+		{203, 0, 113},
+		{192, 0, 2},
+	}
+	authHostIP     = "10.0.2.15"
 	syslogUsers    = []string{"alice", "bob", "deploy", "ops", "ubuntu", "analyst"}
-	syslogServices = []string{"nginx", "postgres", "app-worker", "haproxy", "redis", "backup-agent", "cron", "systemd"}
+	syslogServices = []string{"nginx", "postgres", "app-worker", "haproxy", "redis", "backup-agent"}
+	syslogPrograms = []string{
+		"nginx", "nginx", "nginx",
+		"postgres", "postgres",
+		"app-worker", "app-worker", "app-worker",
+		"haproxy", "haproxy",
+		"redis", "redis",
+		"backup-agent", "backup-agent",
+		"sudo",
+		"systemd", "systemd", "systemd",
+		"kernel", "kernel",
+		"dhclient",
+		"CRON", "CRON",
+	}
+	scenarioHostOnce sync.Once
+	scenarioHost     string
+)
+
+var (
+	nginxAssetPaths = []string{
+		"/assets/app.css",
+		"/assets/app.js",
+		"/assets/runtime.js",
+		"/assets/vendor.js",
+		"/assets/logo.svg",
+		"/assets/hero.webp",
+		"/assets/favicon.ico",
+	}
+	nginxDownloadPaths = []string{
+		"/downloads/toolkit.tar.gz",
+		"/downloads/dataset.json",
+		"/downloads/guide.pdf",
+		"/exports/customers-2026-03.csv",
+		"/exports/billing-archive.parquet",
+		"/exports/events.dump.gz",
+		"/reports/compliance-2026-03.pdf",
+		"/reports/latency-weekly.csv",
+	}
+	nginxAPIV1Paths = []string{
+		"/api/v1/health",
+		"/api/v1/orders",
+		"/api/v1/users",
+		"/api/v1/invoices",
+		"/api/v1/products",
+		"/api/v1/sessions",
+	}
+	nginxAPIV2Paths = []string{
+		"/api/v2/orders",
+		"/api/v2/users",
+		"/api/v2/invoices",
+		"/api/v2/products",
+	}
+	nginxBillingPaths = []string{
+		"/billing/invoices",
+		"/billing/payments",
+		"/billing/statements",
+		"/billing/customers",
+		"/billing/aging",
+	}
+	nginxAppPaths = []string{
+		"/app/dashboard",
+		"/app/projects",
+		"/app/settings",
+		"/app/activity",
+		"/app/usage",
+	}
+	nginxProductPaths = []string{
+		"/products/featured",
+		"/products/search",
+		"/products/category/observability",
+		"/products/category/security",
+		"/products/category/infrastructure",
+	}
+	nginxAdminPaths = []string{
+		"/admin/users",
+		"/admin/roles",
+		"/admin/audit",
+		"/admin/feature-flags",
+	}
+	nginxScannerPaths = []string{
+		"/wp-admin/install.php",
+		"/phpmyadmin/index.php",
+		"/.env",
+		"/cgi-bin/luci",
+		"/boaform/admin/formLogin",
+	}
+	nginxLandingPaths = []string{
+		"/",
+		"/pricing",
+		"/docs/getting-started",
+		"/status",
+	}
+	nginxBrowserUserAgents = []string{
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+		"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+		"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+	}
+	nginxLegacyUserAgents = []string{
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:98.0) Gecko/20100101 Firefox/98.0",
+		"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36",
+		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7; rv:97.0) Gecko/20100101 Firefox/97.0",
+	}
+	nginxMobileUserAgents = []string{
+		"Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+		"Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.6312.99 Mobile Safari/537.36",
+		"Mozilla/5.0 (Linux; Android 13; SAMSUNG SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/25.0 Chrome/121.0.0.0 Mobile Safari/537.36",
+	}
+	nginxBotUserAgents = []string{
+		"Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+		"Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
+	}
+	nginxScannerUserAgents = []string{
+		"Nikto/2.5.0",
+		"Nmap Scripting Engine",
+		"Mozilla/5.0 zgrab/0.x",
+	}
+	nginxAPIClientUserAgents = []string{
+		"curl/8.7.1",
+		"python-requests/2.32.3",
+		"Go-http-client/2.0",
+		"invoice-sync/1.14.2",
+		"partner-api-client/3.8.1",
+	}
+	nginxInternalReferrers = []string{
+		"https://portal.example.com/dashboard",
+		"https://portal.example.com/reports",
+		"https://app.example.com/",
+		"https://portal.example.com/billing",
+	}
+	nginxExternalReferrers = []string{
+		"https://www.google.com/search?q=example+products",
+		"https://www.google.com/search?q=portal+example+docs",
+		"https://www.bing.com/search?q=example+monitoring",
+		"https://www.linkedin.com/posts/examplecorp_release-notes",
+	}
+	nginxSocialReferrers = []string{
+		"https://t.co/example",
+		"https://www.reddit.com/r/devops/comments/example",
+	}
+	nginxLoadBalancerIPs = []string{
+		"10.26.237.69",
+		"10.26.237.70",
+		"172.16.14.23",
+	}
 )
 
 type accessRecord struct {
-	Timestamp time.Time
-	IP        string
-	Method    string
-	Path      string
-	Status    int
-	Bytes     int
-	Referrer  string
-	UserAgent string
+	Timestamp            time.Time
+	IP                   string
+	Method               string
+	Path                 string
+	Status               int
+	Bytes                int
+	Referrer             string
+	UserAgent            string
+	Protocol             string
+	RequestLength        int
+	RequestTime          float64
+	Scheme               string
+	ForwardedFor         string
+	UpstreamAddr         string
+	UpstreamResponseTime string
+	UpstreamStatus       string
 }
 
 type authRecord struct {
@@ -78,12 +247,34 @@ type authRecord struct {
 	Message   string
 }
 
+type authTimeline struct {
+	day time.Time
+}
+
+type authEvent struct {
+	Records      []authRecord
+	AttemptHour  int
+	User         string
+	FailureCount int
+	SuccessCount int
+	SourceIPs    []string
+}
+
 type syslogRecord struct {
 	Timestamp time.Time
 	Host      string
 	Program   string
 	PID       int
 	Message   string
+}
+
+type syslogTimeline struct {
+	day            time.Time
+	minuteClusters [24][]int
+}
+
+type nginxTimeline struct {
+	day time.Time
 }
 
 // Prepare generates a deterministic round scenario from the activity template and seed.
@@ -103,6 +294,8 @@ func Prepare(activity Activity, seed int64) (Scenario, error) {
 		return prepareNginxSuccessRate(activity, seed)
 	case "nginx-top-bytes-ip":
 		return prepareNginxTopBytesIP(activity, seed)
+	case "nginx-top-extension":
+		return prepareNginxTopExtension(activity, seed)
 	case "ssh-top-failed-user":
 		return prepareSSHTopFailedUser(activity, seed)
 	case "ssh-distinct-failed-ips":
@@ -391,35 +584,41 @@ func prepareNginxSuccessRate(activity Activity, seed int64) (Scenario, error) {
 	rng := rand.New(rand.NewSource(seed))
 	day := scenarioDay(rng)
 	hour := rng.Intn(24)
-	prefix := pickOne(rng, []string{"/api/v1/", "/app/", "/assets/", "/billing/"})
-	total := 180 + rng.Intn(220)
-	successCount := 60 + rng.Intn(total-80)
+	timeline := newNginxTimeline(day)
+	prefix := pickOne(rng, []string{"/api/v1/", "/api/v2/", "/app/", "/assets/", "/billing/"})
+	total := 220 + rng.Intn(180)
+	successRatio := 0.68 + float64(rng.Intn(7))/100
+	successCount := int(float64(total) * successRatio)
 	records := make([]accessRecord, 0, DefaultScenarioLineCount)
-	ipPool := uniquePrivateIPs(rng, 40)
+	ipPool := uniqueNginxClientIPs(rng, 40)
 
 	for i := 0; i < successCount; i++ {
-		records = append(records, accessRecord{
-			Timestamp: withinHour(day, hour, rng),
-			IP:        pickOne(rng, ipPool),
-			Method:    pickOne(rng, []string{"GET", "POST"}),
-			Path:      randomPathUnderPrefix(prefix, rng),
-			Status:    pickOne(rng, []int{200, 201, 204}),
-			Bytes:     180 + rng.Intn(15000),
-			Referrer:  "-",
-			UserAgent: pickOne(rng, userAgents),
-		})
+		path := randomNginxPathUnderPrefix(prefix, rng)
+		method := nginxMethodForPath(path, rng)
+		status := nginxSuccessStatus(path, method, rng)
+		records = append(records, buildNginxRecord(
+			timeline.withinHour(hour, rng),
+			pickOne(rng, ipPool),
+			method,
+			path,
+			status,
+			rng.Intn(4) == 0,
+			rng,
+		))
 	}
 	for i := successCount; i < total; i++ {
-		records = append(records, accessRecord{
-			Timestamp: withinHour(day, hour, rng),
-			IP:        pickOne(rng, ipPool),
-			Method:    pickOne(rng, []string{"GET", "POST"}),
-			Path:      randomPathUnderPrefix(prefix, rng),
-			Status:    pickOne(rng, []int{301, 302, 401, 404, 429, 500, 502}),
-			Bytes:     80 + rng.Intn(4000),
-			Referrer:  "-",
-			UserAgent: pickOne(rng, userAgents),
-		})
+		path := randomNginxPathUnderPrefix(prefix, rng)
+		method := nginxMethodForPath(path, rng)
+		status := nginxNonSuccessStatus(path, method, rng)
+		records = append(records, buildNginxRecord(
+			timeline.withinHour(hour, rng),
+			pickOne(rng, ipPool),
+			method,
+			path,
+			status,
+			rng.Intn(3) == 0,
+			rng,
+		))
 	}
 	for len(records) < DefaultScenarioLineCount {
 		record := randomNginxRecord(day, rng)
@@ -442,30 +641,30 @@ func prepareNginxTopBytesIP(activity Activity, seed int64) (Scenario, error) {
 	rng := rand.New(rand.NewSource(seed))
 	day := scenarioDay(rng)
 	hour := rng.Intn(24)
+	timeline := newNginxTimeline(day)
 	method := pickOne(rng, []string{"GET", "POST"})
-	ips := uniquePrivateIPs(rng, 6)
+	ips := uniqueNginxClientIPs(rng, 6)
 	targetIP := ips[0]
 	records := make([]accessRecord, 0, DefaultScenarioLineCount)
 	totals := make(map[string]int, len(ips))
 
 	for i, ip := range ips {
-		lineCount := 18 + rng.Intn(18)
-		targetTotal := 0
-		chunks := splitTotal(18000+(len(ips)-i)*3500+rng.Intn(2000), lineCount, 120, rng)
-		for _, bytes := range chunks {
-			targetTotal += bytes
-			records = append(records, accessRecord{
-				Timestamp: withinHour(day, hour, rng),
-				IP:        ip,
-				Method:    method,
-				Path:      randomPathUnderPrefix(pickOne(rng, []string{"/api/v1/", "/assets/", "/billing/"}), rng),
-				Status:    pickOne(rng, []int{200, 200, 201, 206}),
-				Bytes:     bytes,
-				Referrer:  "-",
-				UserAgent: pickOne(rng, userAgents),
-			})
+		lineCount := 14 + (len(ips)-i)*5 + rng.Intn(3)
+		for range lineCount {
+			path := nginxHighBytesPath(method, i == 0, rng)
+			status := nginxTopBytesStatus(path, method, rng)
+			record := buildNginxRecord(
+				timeline.withinHour(hour, rng),
+				ip,
+				method,
+				path,
+				status,
+				false,
+				rng,
+			)
+			totals[ip] += record.Bytes
+			records = append(records, record)
 		}
-		totals[ip] = targetTotal
 	}
 
 	for len(records) < DefaultScenarioLineCount {
@@ -484,32 +683,87 @@ func prepareNginxTopBytesIP(activity Activity, seed int64) (Scenario, error) {
 	), nil
 }
 
-func prepareSSHTopFailedUser(activity Activity, seed int64) (Scenario, error) {
+func prepareNginxTopExtension(activity Activity, seed int64) (Scenario, error) {
 	rng := rand.New(rand.NewSource(seed))
 	day := scenarioDay(rng)
 	hour := rng.Intn(24)
-	users := append([]string(nil), authUsers...)
-	shuffleStrings(rng, users)
-	targetUser := users[0]
-	counts := []int{92 + rng.Intn(16), 77 + rng.Intn(12), 60 + rng.Intn(10), 42 + rng.Intn(8), 27 + rng.Intn(5)}
-	records := make([]authRecord, 0, DefaultScenarioLineCount)
-	sourcePool := uniquePublicIPs(rng, 40)
+	timeline := newNginxTimeline(day)
+	extensions := []string{"js", "css", "pdf", "png", "json"}
+	shuffleStrings(rng, extensions)
+	targetExt := extensions[0]
+	counts := []int{88 + rng.Intn(16), 69 + rng.Intn(12), 51 + rng.Intn(10), 34 + rng.Intn(8), 21 + rng.Intn(6)}
+	records := make([]accessRecord, 0, DefaultScenarioLineCount)
+	ipPool := uniqueNginxClientIPs(rng, 30)
 
-	for i := range counts {
+	for i, ext := range extensions {
 		for range counts[i] {
-			records = append(records, failedSSHRecord(day, hour, users[i], pickOne(rng, sourcePool), rng.Intn(2) == 0, rng))
+			path := nginxPathForExtension(ext, rng)
+			record := buildNginxRecord(
+				timeline.withinHour(hour, rng),
+				pickOne(rng, ipPool),
+				"GET",
+				path,
+				pickOne(rng, []int{200, 200, 200, 206}),
+				rng.Intn(5) == 0,
+				rng,
+			)
+			records = append(records, record)
 		}
 	}
+
 	for len(records) < DefaultScenarioLineCount {
-		record := randomAuthRecord(day, rng)
-		if record.Timestamp.Hour() == hour && strings.Contains(record.Message, "Failed password") {
+		record := randomNginxRecord(day, rng)
+		if record.Timestamp.Hour() == hour && record.Method == "GET" && record.Status/100 == 2 && nginxPathExtension(record.Path) != "" {
 			continue
 		}
 		records = append(records, record)
 	}
 
+	return newNginxScenario(activity, "nginx_access.log",
+		fmt.Sprintf("Which file extension had the most 2xx GET requests during the %s hour in nginx_access.log? Ignore query strings and paths without an extension.", hourWindow(hour)),
+		"Write only the extension without the leading dot.",
+		targetExt,
+		records,
+	), nil
+}
+
+func prepareSSHTopFailedUser(activity Activity, seed int64) (Scenario, error) {
+	rng := rand.New(rand.NewSource(seed))
+	day := scenarioDay(rng)
+	hour := rng.Intn(24)
+	timeline := newAuthTimeline(day)
+	validUsers := authValidUsers()
+	shuffledValidUsers := append([]string(nil), validUsers...)
+	shuffleStrings(rng, shuffledValidUsers)
+	targetUser := shuffledValidUsers[0]
+	otherUsers := append([]string(nil), shuffledValidUsers[1:]...)
+	otherUsers = append(otherUsers, authInvalidUsers...)
+	shuffleStrings(rng, otherUsers)
+	counts := []int{42 + rng.Intn(10), 31 + rng.Intn(8), 22 + rng.Intn(6), 15 + rng.Intn(4), 9 + rng.Intn(3)}
+	records := make([]authRecord, 0, DefaultScenarioLineCount)
+
+	for i := range counts {
+		user := targetUser
+		if i > 0 {
+			user = otherUsers[i-1]
+		}
+		event := authFailureBursts(timeline, hour, user, counts[i], rng)
+		records = append(records, event.Records...)
+	}
+	for len(records) < DefaultScenarioLineCount {
+		event := randomAuthEvent(timeline, rng)
+		if event.AttemptHour == hour && event.FailureCount > 0 {
+			continue
+		}
+		if len(records)+len(event.Records) > DefaultScenarioLineCount {
+			records = append(records, randomAuthNoiseRecord(timeline, rng))
+			continue
+		}
+		records = append(records, event.Records...)
+	}
+
 	return newAuthScenario(activity, "auth.log",
-		fmt.Sprintf("Which username had the most failed SSH login attempts during the %s hour in auth.log? Count both regular and invalid users.", hourWindow(hour)),
+		fmt.Sprintf("Which valid username had the most failed SSH authentication attempts during the %s hour in auth.log? Only consider these valid usernames: %s. Count failed password and failed publickey lines. Do not count the literal word \"invalid\", and ignore standalone \"Invalid user ...\" lines.", hourWindow(hour), strings.Join(validUsers, ", ")),
 		"Write only the username.",
 		targetUser,
 		records,
@@ -520,27 +774,29 @@ func prepareSSHDistinctFailedIPs(activity Activity, seed int64) (Scenario, error
 	rng := rand.New(rand.NewSource(seed))
 	day := scenarioDay(rng)
 	hour := rng.Intn(24)
+	timeline := newAuthTimeline(day)
 	targetUser := pickOne(rng, authUsers)
 	sourceCount := 7 + rng.Intn(18)
-	sources := uniquePublicIPs(rng, sourceCount)
+	sources := uniqueAuthSourceIPs(rng, sourceCount)
 	records := make([]authRecord, 0, DefaultScenarioLineCount)
 
-	for _, ip := range sources {
-		for range 1 + rng.Intn(5) {
-			records = append(records, failedSSHRecord(day, hour, targetUser, ip, rng.Intn(2) == 0, rng))
-		}
-	}
+	event := authDistinctFailedIPsEvent(timeline, hour, targetUser, sources, rng)
+	records = append(records, event.Records...)
+
 	for len(records) < DefaultScenarioLineCount {
-		record := randomAuthRecord(day, rng)
-		if record.Timestamp.Hour() == hour && strings.Contains(record.Message, "Failed password") &&
-			(strings.Contains(record.Message, " for "+targetUser+" ") || strings.Contains(record.Message, " invalid user "+targetUser+" ")) {
+		event := randomAuthEvent(timeline, rng)
+		if event.AttemptHour == hour && event.FailureCount > 0 && event.User == targetUser {
 			continue
 		}
-		records = append(records, record)
+		if len(records)+len(event.Records) > DefaultScenarioLineCount {
+			records = append(records, randomAuthNoiseRecord(timeline, rng))
+			continue
+		}
+		records = append(records, event.Records...)
 	}
 
 	return newAuthScenario(activity, "auth.log",
-		fmt.Sprintf("How many distinct source IPs caused failed SSH logins for user %s during the %s hour in auth.log?", targetUser, hourWindow(hour)),
+		fmt.Sprintf("How many distinct source IPs caused failed SSH authentication attempts for user %s during the %s hour in auth.log? Count failed password and failed publickey lines only.", targetUser, hourWindow(hour)),
 		"Write only the number.",
 		strconv.Itoa(sourceCount),
 		records,
@@ -551,28 +807,31 @@ func prepareSSHTopSuccessUser(activity Activity, seed int64) (Scenario, error) {
 	rng := rand.New(rand.NewSource(seed))
 	day := scenarioDay(rng)
 	hour := rng.Intn(24)
+	timeline := newAuthTimeline(day)
 	users := append([]string(nil), authUsers...)
 	shuffleStrings(rng, users)
 	targetUser := users[0]
-	counts := []int{61 + rng.Intn(14), 48 + rng.Intn(10), 36 + rng.Intn(8), 23 + rng.Intn(6)}
+	counts := []int{14 + rng.Intn(4), 10 + rng.Intn(3), 7 + rng.Intn(2), 4 + rng.Intn(2)}
 	records := make([]authRecord, 0, DefaultScenarioLineCount)
-	sourcePool := uniquePublicIPs(rng, 30)
 
 	for i := range counts {
-		for range counts[i] {
-			records = append(records, acceptedSSHRecord(day, hour, users[i], pickOne(rng, sourcePool), rng))
-		}
+		event := authSuccessSessions(timeline, hour, users[i], counts[i], false, rng)
+		records = append(records, event.Records...)
 	}
 	for len(records) < DefaultScenarioLineCount {
-		record := randomAuthRecord(day, rng)
-		if record.Timestamp.Hour() == hour && strings.Contains(record.Message, "Accepted ") {
+		event := randomAuthEvent(timeline, rng)
+		if event.AttemptHour == hour && event.SuccessCount > 0 {
 			continue
 		}
-		records = append(records, record)
+		if len(records)+len(event.Records) > DefaultScenarioLineCount {
+			records = append(records, randomAuthNoiseRecord(timeline, rng))
+			continue
+		}
+		records = append(records, event.Records...)
 	}
 
 	return newAuthScenario(activity, "auth.log",
-		fmt.Sprintf("Which username has the most successful SSH logins during the %s hour in auth.log?", hourWindow(hour)),
+		fmt.Sprintf("Which username has the most successful SSH logins during the %s hour in auth.log? Count only Accepted lines, not PAM or systemd session messages.", hourWindow(hour)),
 		"Write only the username.",
 		targetUser,
 		records,
@@ -583,16 +842,17 @@ func prepareSyslogSudoFailures(activity Activity, seed int64) (Scenario, error) 
 	rng := rand.New(rand.NewSource(seed))
 	day := scenarioDay(rng)
 	hour := rng.Intn(24)
+	timeline := newSyslogTimeline(day, rng)
 	targetUser := pickOne(rng, syslogUsers)
 	failures := 8 + rng.Intn(18)
 	records := make([]syslogRecord, 0, DefaultScenarioLineCount)
 
 	for range failures {
 		records = append(records, syslogRecord{
-			Timestamp: withinHour(day, hour, rng),
-			Host:      "lab-vm",
+			Timestamp: timeline.timestampInHour(hour, rng),
+			Host:      scenarioHostname(),
 			Program:   "sudo",
-			PID:       1000 + rng.Intn(8000),
+			PID:       syslogPID("sudo", rng),
 			Message: fmt.Sprintf(
 				"pam_unix(sudo:auth): authentication failure; logname=%s uid=1000 euid=0 tty=/dev/pts/%d ruser=%s rhost= user=root",
 				targetUser,
@@ -602,7 +862,7 @@ func prepareSyslogSudoFailures(activity Activity, seed int64) (Scenario, error) 
 		})
 	}
 	for len(records) < DefaultScenarioLineCount {
-		record := randomSyslogRecord(day, rng)
+		record := randomSyslogRecord(timeline, rng)
 		if record.Timestamp.Hour() == hour && record.Program == "sudo" &&
 			strings.Contains(strings.ToLower(record.Message), "authentication failure") &&
 			strings.Contains(record.Message, "ruser="+targetUser) {
@@ -623,19 +883,20 @@ func prepareSyslogTopErrorService(activity Activity, seed int64) (Scenario, erro
 	rng := rand.New(rand.NewSource(seed))
 	day := scenarioDay(rng)
 	hour := rng.Intn(24)
+	timeline := newSyslogTimeline(day, rng)
 	services := append([]string(nil), syslogServices...)
 	shuffleStrings(rng, services)
 	targetService := services[0]
-	counts := []int{83 + rng.Intn(14), 65 + rng.Intn(10), 44 + rng.Intn(8), 29 + rng.Intn(6)}
+	counts := []int{32 + rng.Intn(7), 21 + rng.Intn(5), 12 + rng.Intn(4), 7 + rng.Intn(3)}
 	records := make([]syslogRecord, 0, DefaultScenarioLineCount)
 
 	for i := range counts {
 		for range counts[i] {
-			records = append(records, errorSyslogRecord(day, hour, services[i], rng))
+			records = append(records, errorSyslogRecord(timeline, hour, services[i], rng))
 		}
 	}
 	for len(records) < DefaultScenarioLineCount {
-		record := randomSyslogRecord(day, rng)
+		record := randomSyslogRecord(timeline, rng)
 		if record.Timestamp.Hour() == hour && strings.Contains(strings.ToLower(record.Message), "error") {
 			continue
 		}
@@ -681,7 +942,41 @@ func newAccessScenario(activity Activity, logName, question, outputFormat, expec
 }
 
 func newNginxScenario(activity Activity, logName, question, outputFormat, expectedAnswer string, records []accessRecord) Scenario {
-	return newAccessScenario(activity, logName, question, outputFormat, expectedAnswer, records)
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].Timestamp.Before(records[j].Timestamp)
+	})
+	lines := make([]string, len(records))
+	for i, record := range records {
+		lines[i] = fmt.Sprintf(
+			`%s - - [%s] "%s %s %s" %d %d "%s" "%s" %d %.3f %s "%s" %s %s %s`,
+			record.IP,
+			record.Timestamp.Format("02/Jan/2006:15:04:05 -0700"),
+			record.Method,
+			record.Path,
+			defaultString(record.Protocol, "HTTP/1.1"),
+			record.Status,
+			record.Bytes,
+			defaultString(record.Referrer, "-"),
+			defaultString(record.UserAgent, "-"),
+			record.RequestLength,
+			record.RequestTime,
+			defaultString(record.Scheme, "https"),
+			defaultString(record.ForwardedFor, "-"),
+			defaultString(record.UpstreamAddr, "-"),
+			defaultString(record.UpstreamResponseTime, "-"),
+			defaultString(record.UpstreamStatus, "-"),
+		)
+	}
+	return Scenario{
+		ActivityID:     activity.ID,
+		Title:          activity.Title,
+		LogName:        logName,
+		Question:       question,
+		OutputFormat:   outputFormat,
+		SuggestedTools: append([]string(nil), activity.SuggestedTools...),
+		ExpectedAnswer: expectedAnswer,
+		Lines:          lines,
+	}
 }
 
 func newAuthScenario(activity Activity, logName, question, outputFormat, expectedAnswer string, records []authRecord) Scenario {
@@ -692,7 +987,7 @@ func newAuthScenario(activity Activity, logName, question, outputFormat, expecte
 	for i, record := range records {
 		lines[i] = fmt.Sprintf(
 			"%s %s %s[%d]: %s",
-			record.Timestamp.Format("Jan _2 15:04:05"),
+			record.Timestamp.Format("2006-01-02T15:04:05.000000-07:00"),
 			record.Host,
 			record.Program,
 			record.PID,
@@ -719,7 +1014,7 @@ func newSyslogScenario(activity Activity, logName, question, outputFormat, expec
 	for i, record := range records {
 		lines[i] = fmt.Sprintf(
 			"%s %s %s[%d]: %s",
-			record.Timestamp.Format("Jan _2 15:04:05"),
+			record.Timestamp.Format("2006-01-02T15:04:05.000000-07:00"),
 			record.Host,
 			record.Program,
 			record.PID,
@@ -753,70 +1048,858 @@ func randomAccessRecord(day time.Time, rng *rand.Rand) accessRecord {
 }
 
 func randomNginxRecord(day time.Time, rng *rand.Rand) accessRecord {
-	record := randomAccessRecord(day, rng)
-	record.IP = randomPrivateIP(rng)
-	return record
+	timeline := newNginxTimeline(day)
+	path := randomNginxPath(rng)
+	method := nginxMethodForPath(path, rng)
+	status := randomNginxStatus(path, method, rng)
+	return buildNginxRecord(
+		timeline.randomTimestamp(rng),
+		randomNginxClientIPForPath(path, rng),
+		method,
+		path,
+		status,
+		rng.Intn(4) == 0,
+		rng,
+	)
 }
 
-func randomAuthRecord(day time.Time, rng *rand.Rand) authRecord {
-	hour := rng.Intn(24)
-	if rng.Intn(2) == 0 {
-		return failedSSHRecord(day, hour, pickOne(rng, authUsers), randomPublicIP(rng), rng.Intn(2) == 0, rng)
-	}
-	return acceptedSSHRecord(day, hour, pickOne(rng, authUsers), randomPublicIP(rng), rng)
+func newNginxTimeline(day time.Time) nginxTimeline {
+	return nginxTimeline{day: day}
 }
 
-func randomSyslogRecord(day time.Time, rng *rand.Rand) syslogRecord {
-	service := pickOne(rng, syslogServices)
-	hour := rng.Intn(24)
-	if rng.Intn(6) == 0 {
-		return errorSyslogRecord(day, hour, service, rng)
-	}
-	return syslogRecord{
-		Timestamp: withinHour(day, hour, rng),
-		Host:      "lab-vm",
-		Program:   service,
-		PID:       1000 + rng.Intn(8000),
-		Message:   nonErrorSyslogMessage(service, rng),
+func (t nginxTimeline) randomTimestamp(rng *rand.Rand) time.Time {
+	return t.withinHour(weightedNginxHour(rng), rng)
+}
+
+func (t nginxTimeline) withinHour(hour int, rng *rand.Rand) time.Time {
+	minuteAnchors := []int{0, 1, 2, 14, 15, 16, 29, 30, 31, 44, 45, 46, 58}
+	secondAnchors := []int{0, 0, 1, 1, 2, 3, 15, 16, 30, 30, 31, 45, 45, 46, 58}
+	minute := clampInt(pickOne(rng, minuteAnchors)+(rng.Intn(3)-1), 0, 59)
+	second := clampInt(pickOne(rng, secondAnchors)+(rng.Intn(2)), 0, 59)
+	return t.day.Add(
+		time.Duration(hour)*time.Hour +
+			time.Duration(minute)*time.Minute +
+			time.Duration(second)*time.Second,
+	)
+}
+
+func weightedNginxHour(rng *rand.Rand) int {
+	switch roll := rng.Intn(100); {
+	case roll < 5:
+		return rng.Intn(6)
+	case roll < 15:
+		return 6 + rng.Intn(2)
+	case roll < 65:
+		return 8 + rng.Intn(10)
+	case roll < 90:
+		return 18 + rng.Intn(4)
+	default:
+		return 22 + rng.Intn(2)
 	}
 }
 
-func failedSSHRecord(day time.Time, hour int, user, ip string, invalid bool, rng *rand.Rand) authRecord {
-	if invalid {
-		return authRecord{
-			Timestamp: withinHour(day, hour, rng),
-			Host:      "lab-vm",
-			Program:   "sshd",
-			PID:       1000 + rng.Intn(8000),
-			Message:   fmt.Sprintf("Failed password for invalid user %s from %s port %d ssh2", user, ip, 20000+rng.Intn(40000)),
+func buildNginxRecord(timestamp time.Time, ip, method, path string, status int, proxied bool, rng *rand.Rand) accessRecord {
+	category := nginxPathCategory(path)
+	userAgent := nginxUserAgent(category, method, rng)
+	referer := nginxReferrer(category, path, userAgent, rng)
+	scheme := nginxScheme(category, userAgent, rng)
+	protocol := nginxProtocol(userAgent, scheme, rng)
+	bodyBytes := nginxBodyBytes(path, status, method)
+	requestLength := nginxRequestLength(path, method)
+	upstreamAddr, upstreamStatus := nginxUpstream(path, status)
+	requestTime, upstreamResponseTime := nginxTimings(category, status, bodyBytes, upstreamAddr != "-", rng)
+	forwardedFor := "-"
+	if proxied {
+		forwardedFor = fmt.Sprintf("%s, %s", pickOne(rng, nginxLoadBalancerIPs), ip)
+	}
+	return accessRecord{
+		Timestamp:            timestamp,
+		IP:                   ip,
+		Method:               method,
+		Path:                 path,
+		Status:               status,
+		Bytes:                bodyBytes,
+		Referrer:             referer,
+		UserAgent:            userAgent,
+		Protocol:             protocol,
+		RequestLength:        requestLength,
+		RequestTime:          requestTime,
+		Scheme:               scheme,
+		ForwardedFor:         forwardedFor,
+		UpstreamAddr:         upstreamAddr,
+		UpstreamResponseTime: upstreamResponseTime,
+		UpstreamStatus:       upstreamStatus,
+	}
+}
+
+func randomNginxPath(rng *rand.Rand) string {
+	switch roll := rng.Intn(100); {
+	case roll < 18:
+		return randomNginxPathUnderPrefix("/assets/", rng)
+	case roll < 38:
+		return randomNginxPathUnderPrefix("/api/v1/", rng)
+	case roll < 48:
+		return randomNginxPathUnderPrefix("/api/v2/", rng)
+	case roll < 60:
+		return randomNginxPathUnderPrefix("/app/", rng)
+	case roll < 74:
+		return randomNginxPathUnderPrefix("/products/", rng)
+	case roll < 85:
+		return randomNginxPathUnderPrefix("/billing/", rng)
+	case roll < 91:
+		return pickOne(rng, nginxDownloadPaths)
+	case roll < 94:
+		return "/healthz"
+	case roll < 95:
+		return pickOne(rng, nginxAdminPaths)
+	case roll < 97:
+		return pickOne(rng, nginxScannerPaths)
+	default:
+		return pickOne(rng, nginxLandingPaths)
+	}
+}
+
+func randomNginxPathUnderPrefix(prefix string, rng *rand.Rand) string {
+	switch prefix {
+	case "/assets/":
+		return pickOne(rng, nginxAssetPaths)
+	case "/api/v1/":
+		return maybePaginateAPIPath(pickOne(rng, nginxAPIV1Paths), rng)
+	case "/api/v2/":
+		return maybePaginateAPIPath(pickOne(rng, nginxAPIV2Paths), rng)
+	case "/billing/":
+		return maybePaginateListPath(pickOne(rng, nginxBillingPaths), rng)
+	case "/app/":
+		return maybePaginateListPath(pickOne(rng, nginxAppPaths), rng)
+	case "/products/":
+		return maybeProductPath(rng)
+	case "/reports/", "/downloads/", "/exports/":
+		candidates := make([]string, 0, len(nginxDownloadPaths))
+		for _, path := range nginxDownloadPaths {
+			if strings.HasPrefix(path, prefix) {
+				candidates = append(candidates, path)
+			}
+		}
+		if len(candidates) > 0 {
+			return pickOne(rng, candidates)
+		}
+		return pickOne(rng, nginxDownloadPaths)
+	default:
+		return randomPathUnderPrefix(prefix, rng)
+	}
+}
+
+func maybePaginateAPIPath(path string, rng *rand.Rand) string {
+	if strings.HasSuffix(path, "/health") || strings.HasSuffix(path, "/sessions") {
+		return path
+	}
+	if rng.Intn(100) < 55 {
+		return fmt.Sprintf("%s?page=%d&limit=%d", path, 1+rng.Intn(5), pickOne(rng, []int{20, 50, 100}))
+	}
+	return path
+}
+
+func maybePaginateListPath(path string, rng *rand.Rand) string {
+	if rng.Intn(100) < 35 {
+		return fmt.Sprintf("%s?page=%d&limit=%d", path, 1+rng.Intn(4), pickOne(rng, []int{20, 50}))
+	}
+	return path
+}
+
+func maybeProductPath(rng *rand.Rand) string {
+	path := pickOne(rng, nginxProductPaths)
+	switch {
+	case strings.Contains(path, "/search"):
+		return fmt.Sprintf("%s?q=%s&page=%d&limit=20", path, pickOne(rng, []string{"logs", "monitoring", "security", "billing"}), 1+rng.Intn(4))
+	case strings.Contains(path, "/category/"):
+		if rng.Intn(100) < 60 {
+			return fmt.Sprintf("%s?page=%d&limit=20", path, 1+rng.Intn(5))
 		}
 	}
-	return authRecord{
-		Timestamp: withinHour(day, hour, rng),
-		Host:      "lab-vm",
-		Program:   "sshd",
-		PID:       1000 + rng.Intn(8000),
-		Message:   fmt.Sprintf("Failed password for %s from %s port %d ssh2", user, ip, 20000+rng.Intn(40000)),
+	return path
+}
+
+func nginxPathCategory(path string) string {
+	basePath := accessPathWithoutQuery(path)
+	switch {
+	case strings.HasPrefix(basePath, "/assets/"):
+		return "asset"
+	case strings.HasPrefix(basePath, "/api/"):
+		return "api"
+	case strings.HasPrefix(basePath, "/billing/"):
+		return "billing"
+	case strings.HasPrefix(basePath, "/app/"):
+		return "app"
+	case strings.HasPrefix(basePath, "/products/"):
+		return "product"
+	case strings.HasPrefix(basePath, "/downloads/"), strings.HasPrefix(basePath, "/reports/"), strings.HasPrefix(basePath, "/exports/"):
+		return "download"
+	case strings.HasPrefix(basePath, "/admin/"):
+		return "admin"
+	case basePath == "/healthz" || strings.HasSuffix(basePath, "/health"):
+		return "health"
+	case strings.HasPrefix(basePath, "/wp-admin"), strings.HasPrefix(basePath, "/phpmyadmin"), strings.HasPrefix(basePath, "/cgi-bin/"), basePath == "/.env", strings.HasPrefix(basePath, "/boaform/"):
+		return "scanner"
+	default:
+		return "page"
 	}
 }
 
-func acceptedSSHRecord(day time.Time, hour int, user, ip string, rng *rand.Rand) authRecord {
-	method := pickOne(rng, []string{"publickey", "password"})
-	return authRecord{
-		Timestamp: withinHour(day, hour, rng),
-		Host:      "lab-vm",
-		Program:   "sshd",
-		PID:       1000 + rng.Intn(8000),
-		Message:   fmt.Sprintf("Accepted %s for %s from %s port %d ssh2", method, user, ip, 20000+rng.Intn(40000)),
+func nginxMethodForPath(path string, rng *rand.Rand) string {
+	switch nginxPathCategory(path) {
+	case "asset":
+		return pickWeightedString(rng, weightedStrings{{"GET", 99}, {"HEAD", 1}})
+	case "download":
+		return pickWeightedString(rng, weightedStrings{{"GET", 99}, {"HEAD", 1}})
+	case "api":
+		return pickWeightedString(rng, weightedStrings{{"GET", 49}, {"POST", 41}, {"PUT", 6}, {"PATCH", 2}, {"DELETE", 1}, {"OPTIONS", 1}})
+	case "billing":
+		return pickWeightedString(rng, weightedStrings{{"GET", 46}, {"POST", 42}, {"PUT", 6}, {"PATCH", 3}, {"DELETE", 2}, {"OPTIONS", 1}})
+	case "admin":
+		return pickWeightedString(rng, weightedStrings{{"GET", 54}, {"POST", 38}, {"PATCH", 5}, {"DELETE", 2}, {"OPTIONS", 1}})
+	case "health":
+		return pickWeightedString(rng, weightedStrings{{"GET", 99}, {"HEAD", 1}})
+	case "scanner":
+		return pickWeightedString(rng, weightedStrings{{"GET", 98}, {"HEAD", 1}, {"OPTIONS", 1}})
+	default:
+		return pickWeightedString(rng, weightedStrings{{"GET", 71}, {"POST", 26}, {"OPTIONS", 1}, {"HEAD", 2}})
 	}
 }
 
-func errorSyslogRecord(day time.Time, hour int, service string, rng *rand.Rand) syslogRecord {
+func randomNginxStatus(path, method string, rng *rand.Rand) int {
+	switch nginxPathCategory(path) {
+	case "asset":
+		return pickWeightedInt(rng, weightedInts{{200, 76}, {304, 20}, {404, 3}, {403, 1}})
+	case "download":
+		return pickWeightedInt(rng, weightedInts{{200, 76}, {206, 6}, {302, 11}, {304, 4}, {404, 2}, {403, 1}})
+	case "api":
+		switch method {
+		case "POST":
+			return pickWeightedInt(rng, weightedInts{{200, 61}, {201, 18}, {400, 4}, {401, 3}, {403, 3}, {404, 4}, {409, 2}, {429, 2}, {500, 1}, {502, 1}, {503, 1}})
+		case "DELETE", "PATCH":
+			return pickWeightedInt(rng, weightedInts{{200, 57}, {204, 21}, {400, 4}, {401, 3}, {403, 3}, {404, 4}, {409, 2}, {429, 2}, {500, 2}, {502, 1}, {503, 1}})
+		default:
+			return pickWeightedInt(rng, weightedInts{{200, 70}, {304, 6}, {400, 3}, {401, 2}, {403, 2}, {404, 4}, {429, 2}, {500, 1}, {502, 1}, {503, 1}, {204, 8}})
+		}
+	case "billing":
+		return pickWeightedInt(rng, weightedInts{{200, 66}, {201, 10}, {302, 10}, {304, 4}, {400, 2}, {401, 2}, {403, 2}, {404, 2}, {429, 1}, {500, 1}})
+	case "admin":
+		return pickWeightedInt(rng, weightedInts{{200, 52}, {302, 24}, {401, 7}, {403, 12}, {404, 3}, {500, 1}, {503, 1}})
+	case "scanner":
+		return pickWeightedInt(rng, weightedInts{{404, 67}, {403, 18}, {400, 5}, {301, 8}, {200, 1}, {500, 1}})
+	case "health":
+		return pickWeightedInt(rng, weightedInts{{200, 98}, {502, 1}, {503, 1}})
+	default:
+		return pickWeightedInt(rng, weightedInts{{200, 67}, {301, 9}, {302, 10}, {304, 9}, {400, 1}, {403, 1}, {404, 2}, {500, 1}})
+	}
+}
+
+func nginxSuccessStatus(path, method string, rng *rand.Rand) int {
+	switch nginxPathCategory(path) {
+	case "download":
+		return pickWeightedInt(rng, weightedInts{{200, 88}, {206, 12}})
+	case "api":
+		switch method {
+		case "POST":
+			return pickWeightedInt(rng, weightedInts{{200, 55}, {201, 45}})
+		case "DELETE", "PATCH":
+			return pickWeightedInt(rng, weightedInts{{200, 48}, {204, 52}})
+		default:
+			return pickWeightedInt(rng, weightedInts{{200, 94}, {204, 6}})
+		}
+	default:
+		return pickWeightedInt(rng, weightedInts{{200, 92}, {201, 4}, {204, 4}})
+	}
+}
+
+func nginxNonSuccessStatus(path, method string, rng *rand.Rand) int {
+	switch nginxPathCategory(path) {
+	case "asset":
+		return pickWeightedInt(rng, weightedInts{{304, 52}, {404, 30}, {403, 12}, {500, 6}})
+	case "api", "billing":
+		if method == "POST" {
+			return pickWeightedInt(rng, weightedInts{{400, 20}, {401, 16}, {403, 16}, {404, 18}, {409, 8}, {429, 12}, {500, 5}, {502, 3}, {503, 2}})
+		}
+		return pickWeightedInt(rng, weightedInts{{302, 8}, {304, 8}, {400, 12}, {401, 12}, {403, 16}, {404, 20}, {429, 12}, {500, 6}, {502, 4}, {503, 2}})
+	case "admin":
+		return pickWeightedInt(rng, weightedInts{{302, 24}, {401, 18}, {403, 40}, {404, 10}, {500, 5}, {503, 3}})
+	default:
+		return pickWeightedInt(rng, weightedInts{{301, 28}, {302, 28}, {304, 16}, {403, 8}, {404, 14}, {500, 4}, {503, 2}})
+	}
+}
+
+func nginxTopBytesStatus(path, method string, rng *rand.Rand) int {
+	switch nginxPathCategory(path) {
+	case "download":
+		return pickWeightedInt(rng, weightedInts{{200, 80}, {206, 20}})
+	default:
+		return nginxSuccessStatus(path, method, rng)
+	}
+}
+
+func nginxHighBytesPath(method string, preferLarge bool, rng *rand.Rand) string {
+	if method == "POST" {
+		if preferLarge {
+			return pickOne(rng, []string{
+				"/api/v1/invoices?page=1&limit=100",
+				"/api/v1/orders?page=1&limit=100",
+				"/billing/invoices?page=1&limit=100",
+				"/api/v2/products?page=1&limit=100",
+			})
+		}
+		return pickOne(rng, []string{
+			"/api/v1/orders?page=2&limit=20",
+			"/billing/payments",
+			"/api/v2/invoices?page=2&limit=20",
+			"/api/v1/users?page=3&limit=20",
+		})
+	}
+	if preferLarge {
+		return pickOne(rng, []string{
+			"/downloads/toolkit.tar.gz",
+			"/exports/billing-archive.parquet",
+			"/reports/compliance-2026-03.pdf",
+			"/assets/vendor.js",
+		})
+	}
+	return pickOne(rng, []string{
+		"/assets/app.js",
+		"/assets/app.css",
+		"/downloads/dataset.json",
+		"/reports/latency-weekly.csv",
+	})
+}
+
+func nginxPathForExtension(ext string, rng *rand.Rand) string {
+	switch ext {
+	case "js":
+		return pickOne(rng, []string{"/assets/app.js", "/assets/runtime.js", "/assets/vendor.js"})
+	case "css":
+		return "/assets/app.css"
+	case "pdf":
+		return pickOne(rng, []string{"/downloads/guide.pdf", "/reports/compliance-2026-03.pdf"})
+	case "png":
+		return "/assets/team-photo.png"
+	case "json":
+		return "/downloads/dataset.json"
+	default:
+		return pickOne(rng, nginxDownloadPaths)
+	}
+}
+
+func nginxPathExtension(path string) string {
+	basePath := accessPathWithoutQuery(path)
+	slash := strings.LastIndex(basePath, "/")
+	dot := strings.LastIndex(basePath, ".")
+	if dot == -1 || dot < slash {
+		return ""
+	}
+	return basePath[dot+1:]
+}
+
+func accessPathWithoutQuery(path string) string {
+	if idx := strings.Index(path, "?"); idx >= 0 {
+		return path[:idx]
+	}
+	return path
+}
+
+func nginxUserAgent(category, method string, rng *rand.Rand) string {
+	switch category {
+	case "scanner":
+		return pickOne(rng, nginxScannerUserAgents)
+	case "api":
+		switch roll := rng.Intn(100); {
+		case roll < 34:
+			return pickOne(rng, nginxBrowserUserAgents)
+		case roll < 50:
+			return pickOne(rng, nginxMobileUserAgents)
+		case roll < 74:
+			return pickOne(rng, nginxAPIClientUserAgents)
+		case roll < 88:
+			return pickOne(rng, nginxLegacyUserAgents)
+		default:
+			return pickOne(rng, nginxBotUserAgents)
+		}
+	case "health":
+		return pickOne(rng, nginxAPIClientUserAgents)
+	default:
+		switch roll := rng.Intn(100); {
+		case roll < 46:
+			return pickOne(rng, nginxBrowserUserAgents)
+		case roll < 63:
+			return pickOne(rng, nginxLegacyUserAgents)
+		case roll < 83:
+			return pickOne(rng, nginxMobileUserAgents)
+		case roll < 95:
+			return pickOne(rng, nginxAPIClientUserAgents)
+		default:
+			return pickOne(rng, nginxBotUserAgents)
+		}
+	}
+}
+
+func nginxReferrer(category, path, userAgent string, rng *rand.Rand) string {
+	if category == "scanner" || strings.Contains(userAgent, "bot") {
+		return "-"
+	}
+	switch category {
+	case "asset", "app", "billing", "admin", "api":
+		switch roll := rng.Intn(100); {
+		case roll < 38:
+			return "-"
+		case roll < 82:
+			return pickOne(rng, nginxInternalReferrers)
+		default:
+			return pickOne(rng, nginxExternalReferrers)
+		}
+	case "download":
+		switch roll := rng.Intn(100); {
+		case roll < 35:
+			return "-"
+		case roll < 70:
+			return pickOne(rng, nginxInternalReferrers)
+		case roll < 90:
+			return pickOne(rng, nginxExternalReferrers)
+		default:
+			return pickOne(rng, nginxSocialReferrers)
+		}
+	default:
+		switch roll := rng.Intn(100); {
+		case roll < 36:
+			return "-"
+		case roll < 66:
+			return pickOne(rng, nginxExternalReferrers)
+		case roll < 88:
+			return pickOne(rng, nginxInternalReferrers)
+		default:
+			return pickOne(rng, nginxSocialReferrers)
+		}
+	}
+}
+
+func nginxScheme(category, userAgent string, rng *rand.Rand) string {
+	if category == "scanner" && rng.Intn(100) < 35 {
+		return "http"
+	}
+	if strings.Contains(userAgent, "Nmap") || strings.Contains(userAgent, "Nikto") {
+		if rng.Intn(100) < 45 {
+			return "http"
+		}
+	}
+	if rng.Intn(100) < 92 {
+		return "https"
+	}
+	return "http"
+}
+
+func nginxProtocol(userAgent, scheme string, rng *rand.Rand) string {
+	if scheme == "https" {
+		switch roll := rng.Intn(100); {
+		case roll < 3 && (strings.Contains(userAgent, "Chrome/12") || strings.Contains(userAgent, "Safari/604") || strings.Contains(userAgent, "Chrome/123") || strings.Contains(userAgent, "Chrome/124")):
+			return "HTTP/3"
+		case roll < 28:
+			return "HTTP/2.0"
+		default:
+			return "HTTP/1.1"
+		}
+	}
+	if rng.Intn(100) < 6 {
+		return "HTTP/2.0"
+	}
+	return "HTTP/1.1"
+}
+
+func nginxBodyBytes(path string, status int, method string) int {
+	if status == 204 || status == 304 || method == "HEAD" {
+		return 0
+	}
+	if status >= 400 {
+		return stableRangeForString(fmt.Sprintf("%d:%s", status, accessPathWithoutQuery(path)), 156, 2400)
+	}
+
+	basePath := accessPathWithoutQuery(path)
+	switch nginxPathCategory(path) {
+	case "asset":
+		return stableRangeForString(basePath, 1024, 5_000_000)
+	case "download":
+		return stableRangeForString(basePath, 100_000, 50_000_000)
+	case "api":
+		return stableRangeForString(basePath, 200, 50_000)
+	case "billing":
+		return stableRangeForString(basePath, 600, 40_000)
+	case "product", "app", "page", "admin":
+		return stableRangeForString(basePath, 8_000, 120_000)
+	case "health":
+		return stableRangeForString(basePath, 120, 512)
+	default:
+		return stableRangeForString(basePath, 512, 20_000)
+	}
+}
+
+func nginxRequestLength(path, method string) int {
+	basePath := accessPathWithoutQuery(path)
+	switch method {
+	case "POST":
+		return stableRangeForString(method+":"+basePath, 700, 3_800)
+	case "PUT", "PATCH":
+		return stableRangeForString(method+":"+basePath, 900, 4_600)
+	case "DELETE":
+		return stableRangeForString(method+":"+basePath, 260, 900)
+	default:
+		return stableRangeForString(method+":"+basePath, 180, 1_400)
+	}
+}
+
+func nginxUpstream(path string, status int) (string, string) {
+	if status/100 == 3 || nginxPathCategory(path) == "asset" || nginxPathCategory(path) == "download" || nginxPathCategory(path) == "health" || nginxPathCategory(path) == "scanner" {
+		return "-", "-"
+	}
+	switch nginxPathCategory(path) {
+	case "api":
+		return fmt.Sprintf("10.2.1.%d:8080", 10+stableRangeForString(accessPathWithoutQuery(path), 1, 9)), strconv.Itoa(status)
+	case "billing":
+		return fmt.Sprintf("10.2.2.%d:9000", 20+stableRangeForString(accessPathWithoutQuery(path), 1, 6)), strconv.Itoa(status)
+	case "admin":
+		return fmt.Sprintf("10.2.3.%d:8443", 30+stableRangeForString(accessPathWithoutQuery(path), 1, 4)), strconv.Itoa(status)
+	default:
+		return fmt.Sprintf("10.2.4.%d:3000", 40+stableRangeForString(accessPathWithoutQuery(path), 1, 6)), strconv.Itoa(status)
+	}
+}
+
+func nginxTimings(category string, status, bytes int, hasUpstream bool, rng *rand.Rand) (float64, string) {
+	var minMs, maxMs int
+	switch category {
+	case "asset":
+		minMs, maxMs = 3, 240
+	case "download":
+		minMs, maxMs = 140, 4600
+	case "api":
+		minMs, maxMs = 12, 620
+	case "billing", "admin":
+		minMs, maxMs = 18, 760
+	case "health":
+		minMs, maxMs = 2, 45
+	case "scanner":
+		minMs, maxMs = 4, 120
+	default:
+		minMs, maxMs = 8, 420
+	}
+	if status >= 500 {
+		maxMs += 500
+	}
+	if bytes > 5_000_000 {
+		maxMs += 2200
+	}
+	requestMs := minMs + rng.Intn(maxInt(maxMs-minMs+1, 1))
+	requestTime := float64(requestMs) / 1000
+	if !hasUpstream {
+		return requestTime, "-"
+	}
+	upstreamMs := maxInt(requestMs-(4+rng.Intn(30)), 1)
+	return requestTime, fmt.Sprintf("%.3f", float64(upstreamMs)/1000)
+}
+
+func randomNginxClientIPForPath(path string, rng *rand.Rand) string {
+	switch nginxPathCategory(path) {
+	case "admin":
+		return randomNginxPrivateIP(rng)
+	case "scanner":
+		if rng.Intn(100) < 80 {
+			return randomNginxPublicIPv4(rng)
+		}
+		return randomNginxIPv6(rng)
+	default:
+		return randomNginxClientIP(rng)
+	}
+}
+
+func randomNginxClientIP(rng *rand.Rand) string {
+	switch roll := rng.Intn(100); {
+	case roll < 35:
+		return randomNginxPrivateIP(rng)
+	case roll < 88:
+		return randomNginxPublicIPv4(rng)
+	default:
+		return randomNginxIPv6(rng)
+	}
+}
+
+func uniqueNginxClientIPs(rng *rand.Rand, count int) []string {
+	out := make([]string, 0, count)
+	seen := make(map[string]struct{}, count)
+	for len(out) < count {
+		ip := randomNginxClientIP(rng)
+		if _, ok := seen[ip]; ok {
+			continue
+		}
+		seen[ip] = struct{}{}
+		out = append(out, ip)
+	}
+	return out
+}
+
+func randomNginxPrivateIP(rng *rand.Rand) string {
+	switch rng.Intn(3) {
+	case 0:
+		return fmt.Sprintf("10.%d.%d.%d", 20+rng.Intn(8), rng.Intn(255), 1+rng.Intn(253))
+	case 1:
+		return fmt.Sprintf("172.%d.%d.%d", 16+rng.Intn(12), rng.Intn(255), 1+rng.Intn(253))
+	default:
+		return fmt.Sprintf("192.168.%d.%d", rng.Intn(255), 1+rng.Intn(253))
+	}
+}
+
+func randomNginxPublicIPv4(rng *rand.Rand) string {
+	blocks := [][3]int{
+		{198, 51, 100},
+		{198, 51, 100},
+		{203, 0, 113},
+		{203, 0, 113},
+		{192, 0, 2},
+	}
+	block := pickOne(rng, blocks)
+	return fmt.Sprintf("%d.%d.%d.%d", block[0], block[1], block[2], 1+rng.Intn(253))
+}
+
+func randomNginxIPv6(rng *rand.Rand) string {
+	prefixes := [][2]uint16{
+		{0x2001, 0xdb8},
+		{0x2001, 0xdb8},
+		{0x2001, 0xdb9},
+	}
+	prefix := pickOne(rng, prefixes)
+	return fmt.Sprintf("%x:%x:%x:%x::%x", prefix[0], prefix[1], 0x10+rng.Intn(0xef), 1+rng.Intn(0xfff), 1+rng.Intn(0xfff))
+}
+
+func randomAuthEvent(timeline authTimeline, rng *rand.Rand) authEvent {
+	if rng.Intn(100) < 65 {
+		hour := randomAuthFailureHour(rng)
+		switch roll := rng.Intn(100); {
+		case roll < 35:
+			return authFailureBursts(timeline, hour, pickOne(rng, authInvalidUsers), randomAuthFailureBurstSize(rng), rng)
+		case roll < 68:
+			return authFailureBursts(timeline, hour, pickOne(rng, authUsers), randomAuthFailureBurstSize(rng), rng)
+		case roll < 88:
+			return authFailureBursts(timeline, hour, pickOne(rng, authServiceUsers), 2+rng.Intn(5), rng)
+		default:
+			return authFailureBursts(timeline, hour, "root", 2+rng.Intn(6), rng)
+		}
+	}
+
+	user := pickOne(rng, authUsers)
+	if rng.Intn(5) == 0 {
+		user = pickOne(rng, authServiceUsers)
+	}
+	return authSuccessSessions(timeline, randomAuthSuccessHour(rng), user, 1, true, rng)
+}
+
+func randomSyslogRecord(timeline syslogTimeline, rng *rand.Rand) syslogRecord {
+	if rng.Intn(45) == 0 {
+		return errorSyslogRecord(timeline, -1, pickOne(rng, syslogServices), rng)
+	}
+	program := pickOne(rng, syslogPrograms)
 	return syslogRecord{
-		Timestamp: withinHour(day, hour, rng),
-		Host:      "lab-vm",
+		Timestamp: timeline.randomTimestamp(rng),
+		Host:      scenarioHostname(),
+		Program:   program,
+		PID:       syslogPID(program, rng),
+		Message:   nonErrorSyslogMessage(program, rng),
+	}
+}
+
+func newAuthTimeline(day time.Time) authTimeline {
+	return authTimeline{day: day}
+}
+
+func authFailureBursts(timeline authTimeline, hour int, user string, attempts int, rng *rand.Rand) authEvent {
+	invalid := containsString(authInvalidUsers, user)
+	method := authFailureMethod(user)
+	sourceIPs := authBurstIPs(rng, attempts)
+	event := authEvent{
+		AttemptHour:  hour,
+		User:         user,
+		FailureCount: attempts,
+		SourceIPs:    append([]string(nil), sourceIPs...),
+	}
+
+	burstCount := 1
+	if attempts >= 18 {
+		burstCount = 2
+	}
+	if attempts >= 36 {
+		burstCount = 3
+	}
+
+	for _, burstAttempts := range splitTotal(attempts, burstCount, 1, rng) {
+		event.Records = append(event.Records, failedAuthBurstRecords(timeline, hour, user, sourceIPs, burstAttempts, invalid, method, rng)...)
+	}
+
+	return event
+}
+
+func authDistinctFailedIPsEvent(timeline authTimeline, hour int, user string, sources []string, rng *rand.Rand) authEvent {
+	event := authEvent{
+		AttemptHour: hour,
+		User:        user,
+		SourceIPs:   append([]string(nil), sources...),
+	}
+
+	for _, ip := range sources {
+		attempts := 1 + rng.Intn(4)
+		event.FailureCount += attempts
+		event.Records = append(event.Records, failedAuthBurstRecords(timeline, hour, user, []string{ip}, attempts, false, authFailureMethod(user), rng)...)
+	}
+
+	return event
+}
+
+func authSuccessSessions(timeline authTimeline, hour int, user string, count int, allowRecovered bool, rng *rand.Rand) authEvent {
+	event := authEvent{
+		AttemptHour:  hour,
+		User:         user,
+		SuccessCount: count,
+	}
+
+	successIPs := authBurstIPs(rng, maxInt(1, minInt(count, 3)))
+	event.SourceIPs = append(event.SourceIPs, successIPs...)
+
+	for i := 0; i < count; i++ {
+		recovered := allowRecovered && !containsString(authServiceUsers, user) && rng.Intn(3) == 0
+		session := acceptedSSHEvent(timeline, hour, user, successIPs[i%len(successIPs)], recovered, rng)
+		event.FailureCount += session.FailureCount
+		event.Records = append(event.Records, session.Records...)
+	}
+
+	return event
+}
+
+func failedAuthBurstRecords(timeline authTimeline, hour int, user string, sourceIPs []string, attempts int, invalid bool, method string, rng *rand.Rand) []authRecord {
+	records := make([]authRecord, 0, attempts*4)
+	attemptTime := timeline.burstStart(hour, attempts, rng)
+
+	for i := 0; i < attempts; i++ {
+		if i > 0 {
+			attemptTime = attemptTime.Add(time.Duration(1+rng.Intn(3)) * time.Second)
+		}
+		ip := sourceIPs[minInt(len(sourceIPs)-1, (i/5)%len(sourceIPs))]
+		port := randomClientPort(rng)
+		pid := authPID("sshd", rng)
+		records = append(records, failedAuthAttemptRecords(attemptTime, user, ip, port, invalid, method, pid, rng)...)
+		if rng.Intn(7) == 0 {
+			records = append(records, authPreauthNoiseRecord(attemptTime.Add(250*time.Millisecond), user, ip, port, invalid, pid, rng))
+		}
+	}
+
+	return records
+}
+
+func failedAuthAttemptRecords(attemptTime time.Time, user, ip string, port int, invalid bool, method string, pid int, rng *rand.Rand) []authRecord {
+	connectionTime := attemptTime.Add(-time.Second - time.Duration(100+rng.Intn(350))*time.Millisecond)
+	bannerTime := connectionTime.Add(time.Duration(120+rng.Intn(220)) * time.Millisecond)
+	records := []authRecord{
+		newAuthRecord(connectionTime, "sshd", pid, fmt.Sprintf("Connection from %s port %d on %s port 22", ip, port, authHostIP)),
+		newAuthRecord(bannerTime, "sshd", pid, fmt.Sprintf("Client protocol version 2.0; client software version %s", pickOne(rng, authSSHClients))),
+	}
+
+	switch {
+	case invalid:
+		invalidTime := attemptTime.Add(-time.Duration(50+rng.Intn(150)) * time.Millisecond)
+		records = append(records,
+			newAuthRecord(invalidTime, "sshd", pid, fmt.Sprintf("Invalid user %s from %s port %d", user, ip, port)),
+			newAuthRecord(attemptTime, "sshd", pid, fmt.Sprintf("Failed password for invalid user %s from %s port %d ssh2", user, ip, port)),
+		)
+	case method == "publickey":
+		records = append(records, newAuthRecord(attemptTime, "sshd", pid, fmt.Sprintf("Failed publickey for %s from %s port %d ssh2", user, ip, port)))
+	default:
+		records = append(records, newAuthRecord(attemptTime, "sshd", pid, fmt.Sprintf("Failed password for %s from %s port %d ssh2", user, ip, port)))
+	}
+
+	return records
+}
+
+func acceptedSSHEvent(timeline authTimeline, hour int, user, ip string, recovered bool, rng *rand.Rand) authEvent {
+	acceptedTime := timeline.isolatedStart(hour, rng)
+	records := make([]authRecord, 0, 8)
+	failureCount := 0
+
+	if recovered {
+		failCount := 1 + rng.Intn(2)
+		failureCount = failCount
+		failTime := acceptedTime.Add(-time.Duration(2*failCount+1+rng.Intn(2)) * time.Second)
+		for i := 0; i < failCount; i++ {
+			pid := authPID("sshd", rng)
+			port := randomClientPort(rng)
+			records = append(records, failedAuthAttemptRecords(failTime, user, ip, port, false, "password", pid, rng)...)
+			failTime = failTime.Add(time.Duration(1+rng.Intn(2)) * time.Second)
+		}
+	}
+
+	pid := authPID("sshd", rng)
+	logindPID := authPID("systemd-logind", rng)
+	port := randomClientPort(rng)
+	method := authSuccessMethod(user, rng)
+	connectionTime := acceptedTime.Add(-time.Second - time.Duration(100+rng.Intn(300))*time.Millisecond)
+	bannerTime := connectionTime.Add(time.Duration(120+rng.Intn(220)) * time.Millisecond)
+	openTime := acceptedTime.Add(time.Duration(60+rng.Intn(220)) * time.Millisecond)
+	sessionTime := openTime.Add(time.Duration(40+rng.Intn(180)) * time.Millisecond)
+	closeTime := acceptedTime.Add(time.Duration(2+rng.Intn(14))*time.Minute + time.Duration(rng.Intn(40))*time.Second)
+	dayEnd := timeline.day.Add(24*time.Hour - time.Microsecond)
+	if closeTime.After(dayEnd) {
+		closeTime = dayEnd
+	}
+
+	records = append(records,
+		newAuthRecord(connectionTime, "sshd", pid, fmt.Sprintf("Connection from %s port %d on %s port 22", ip, port, authHostIP)),
+		newAuthRecord(bannerTime, "sshd", pid, fmt.Sprintf("Client protocol version 2.0; client software version %s", pickOne(rng, authSSHClients))),
+		newAuthRecord(acceptedTime, "sshd", pid, fmt.Sprintf("Accepted %s for %s from %s port %d ssh2", method, user, ip, port)),
+		newAuthRecord(openTime, "sshd", pid, fmt.Sprintf("pam_unix(sshd:session): session opened for user %s by (uid=0)", user)),
+		newAuthRecord(sessionTime, "systemd-logind", logindPID, fmt.Sprintf("New session %d of user %s", 10+rng.Intn(500), user)),
+		newAuthRecord(closeTime, "sshd", pid, fmt.Sprintf("pam_unix(sshd:session): session closed for user %s", user)),
+	)
+
+	return authEvent{
+		Records:      records,
+		AttemptHour:  hour,
+		User:         user,
+		FailureCount: failureCount,
+		SuccessCount: 1,
+		SourceIPs:    []string{ip},
+	}
+}
+
+func authPreauthNoiseRecord(timestamp time.Time, user, ip string, port int, invalid bool, pid int, rng *rand.Rand) authRecord {
+	switch rng.Intn(3) {
+	case 0:
+		return newAuthRecord(timestamp, "sshd", pid, fmt.Sprintf("Did not receive identification string from %s port %d", ip, port))
+	case 1:
+		if invalid {
+			return newAuthRecord(timestamp, "sshd", pid, fmt.Sprintf("Connection closed by invalid user %s %s port %d [preauth]", user, ip, port))
+		}
+		return newAuthRecord(timestamp, "sshd", pid, fmt.Sprintf("Connection closed by authenticating user %s %s port %d [preauth]", user, ip, port))
+	default:
+		return newAuthRecord(timestamp, "sshd", pid, fmt.Sprintf("Connection closed by %s port %d [preauth]", ip, port))
+	}
+}
+
+func randomAuthNoiseRecord(timeline authTimeline, rng *rand.Rand) authRecord {
+	hour := randomAuthFailureHour(rng)
+	ip := randomAuthIPFromSubnet(pickOne(rng, authBotSubnets), rng)
+	port := randomClientPort(rng)
+	timestamp := timeline.burstStart(hour, 2, rng).Add(time.Duration(rng.Intn(6)) * time.Second)
+	return authPreauthNoiseRecord(timestamp, pickOne(rng, authInvalidUsers), ip, port, rng.Intn(2) == 0, authPID("sshd", rng), rng)
+}
+
+func errorSyslogRecord(timeline syslogTimeline, hour int, service string, rng *rand.Rand) syslogRecord {
+	timestamp := timeline.randomTimestamp(rng)
+	if hour >= 0 {
+		timestamp = timeline.timestampInHour(hour, rng)
+	}
+	return syslogRecord{
+		Timestamp: timestamp,
+		Host:      scenarioHostname(),
 		Program:   service,
-		PID:       1000 + rng.Intn(8000),
+		PID:       syslogPID(service, rng),
 		Message:   pickOne(rng, errorMessages(service)),
 	}
 }
@@ -825,32 +1908,74 @@ func nonErrorSyslogMessage(service string, rng *rand.Rand) string {
 	switch service {
 	case "nginx":
 		return pickOne(rng, []string{
-			"worker process is shutting down",
-			"gracefully reloaded configuration",
-			"accepted connection from 10.0.2.15",
+			"signal process started",
+			"gracefully shutting down worker process",
+			"client 10.10.4.22 closed keepalive connection",
 		})
 	case "postgres":
 		return pickOne(rng, []string{
-			"checkpoint complete",
-			"autovacuum launcher started",
-			"connection authorized: user=app database=lab",
+			`checkpoint complete: wrote 1842 buffers (11.2%); 0 WAL file(s) added, 0 removed, 1 recycled; write=73.421 s, sync=0.018 s, total=73.463 s`,
+			`connection authorized: user=app database=lab application_name=api`,
+			`automatic vacuum of table "public.jobs": index scans: 1`,
 		})
 	case "app-worker":
 		return pickOne(rng, []string{
-			"job queue depth is now 12",
-			"completed batch sync in 183ms",
+			"drained 14 jobs from queue invoices",
+			"processed batch 8821 in 183ms",
 			"lease renewed for worker shard 3",
+		})
+	case "haproxy":
+		return pickOne(rng, []string{
+			"Proxy api started.",
+			"Server api/api-2 is UP, reason: Layer7 check passed, code: 200, check duration: 4ms.",
+			"Reloading HAProxy",
 		})
 	case "sudo":
 		return pickOne(rng, []string{
 			"pam_unix(sudo:session): session opened for user root by alice(uid=1000)",
 			"pam_unix(sudo:session): session closed for user root",
 		})
+	case "redis":
+		return pickOne(rng, []string{
+			"Background saving terminated with success",
+			"DB loaded from disk: 0.421 seconds",
+			"Ready to accept connections",
+		})
+	case "backup-agent":
+		return pickOne(rng, []string{
+			"Completed snapshot for volume /var/lib/postgresql/data in 18.4s",
+			"Pruned 3 expired recovery points for policy nightly-db",
+			"Verified manifest for policy nightly-db",
+		})
+	case "systemd":
+		return pickOne(rng, []string{
+			"Started Session 248 of user ubuntu.",
+			"Starting Cleanup of Temporary Directories...",
+			"Stopped User Manager for UID 1000.",
+		})
+	case "kernel":
+		return pickOne(rng, []string{
+			"eth0: Link is Up - 1000Mbps/Full - flow control rx/tx",
+			"EXT4-fs (sda1): mounted filesystem with ordered data mode. Opts: (null)",
+			"nf_conntrack: default automatic helper assignment has been turned off",
+		})
+	case "dhclient":
+		return pickOne(rng, []string{
+			"DHCPREQUEST on eth0 to 10.0.2.2 port 67",
+			"DHCPACK of 10.0.2.15 from 10.0.2.2",
+			"bound to 10.0.2.15 -- renewal in 34827 seconds",
+		})
+	case "CRON":
+		return pickOne(rng, []string{
+			"(root) CMD (/usr/lib/apt/apt.systemd.daily)",
+			"(backup) CMD (/usr/local/bin/backup-agent run --incremental)",
+			"(www-data) CMD (test -x /usr/bin/certbot && certbot -q renew)",
+		})
 	default:
 		return pickOne(rng, []string{
 			"completed scheduled maintenance task",
-			"rotation finished successfully",
-			"state heartbeat updated",
+			"state transition completed",
+			"health check passed",
 		})
 	}
 }
@@ -859,45 +1984,238 @@ func errorMessages(service string) []string {
 	switch service {
 	case "nginx":
 		return []string{
-			"error connecting to upstream 10.0.4.21:443",
-			"ERROR upstream timed out while reading response header from upstream",
-			"Error opening cache file /var/cache/nginx/temp/0003",
+			`[error] 1268#1268: *4921 upstream timed out (110: Connection timed out) while reading response header from upstream, client: 10.10.4.12, server: _, request: "GET /api/v1/orders HTTP/1.1", upstream: "http://10.20.1.12:8080/api/v1/orders", host: "portal.example.com"`,
+			`[error] 1244#1244: *311 open() "/var/cache/nginx/proxy_temp/7/00/0000000007" failed (13: Permission denied) while reading upstream`,
+			`[error] 1289#1289: *885 connect() failed (111: Connection refused) while connecting to upstream, client: 10.10.4.22, server: _, request: "POST /billing/invoices HTTP/1.1", upstream: "http://10.20.1.44:9000/billing/invoices", host: "portal.example.com"`,
 		}
 	case "postgres":
 		return []string{
-			"error: could not extend relation base/16384/2619",
-			"ERROR: deadlock detected while updating order queue",
-			"Error writing temporary statistics file",
+			`ERROR:  deadlock detected`,
+			`ERROR:  could not serialize access due to concurrent update`,
+			`ERROR:  could not extend file "base/16384/2619": No space left on device`,
 		}
 	case "app-worker":
 		return []string{
-			"error processing invoice batch 8821",
-			"ERROR could not reach message broker within deadline",
-			"Error committing checkpoint for stream processor",
+			"job error: failed to publish batch 8821: context deadline exceeded",
+			"stream error: checkpoint commit for shard 3 failed: leader not available",
+			"worker error: invoice export retry budget exhausted for customer 1842",
 		}
 	case "haproxy":
 		return []string{
-			"error while parsing health-check response from backend api-3",
-			"ERROR failed to connect to backend payment-1",
-			"Error reloading certificate bundle for frontend public_https",
+			"[ALERT]    (1942) : parsing [/etc/haproxy/haproxy.cfg:42] : error detected while parsing a 'server' line.",
+			"backend api/api-3 connection error during SSL handshake",
+			"server payments/payment-2 error limit reached, server disabled",
 		}
 	case "redis":
 		return []string{
-			"error loading appendonly.aof: short read",
-			"ERROR replica sync aborted by master",
-			"Error writing command to client output buffer",
+			"Error accepting a client connection: Connection reset by peer",
+			"Error writing to the AOF buffer: No space left on device",
+			"Short read or OOM loading DB. Unrecoverable error, aborting now.",
+		}
+	case "backup-agent":
+		return []string{
+			"job error: upload of chunk 004217 for snapshot nightly-db failed: context deadline exceeded",
+			"repository error: manifest verification failed for snapshot nightly-db",
+			"storage error: unable to flush pack file to object store: broken pipe",
 		}
 	default:
 		return []string{
-			"error rotating archive segment",
-			"ERROR health check exceeded retry budget",
-			"Error flushing state checkpoint to disk",
+			"error: unexpected service failure",
 		}
 	}
 }
 
 func scenarioDay(rng *rand.Rand) time.Time {
 	return time.Date(2026, time.March, 10+rng.Intn(10), 0, 0, 0, 0, time.UTC)
+}
+
+func (t authTimeline) burstStart(hour, attempts int, rng *rand.Rand) time.Time {
+	minutes := []int{
+		4 + rng.Intn(5),
+		18 + rng.Intn(6),
+		35 + rng.Intn(8),
+	}
+	if attempts <= 24 {
+		minutes = append(minutes, 50+rng.Intn(5))
+	}
+
+	minute := pickOne(rng, minutes)
+	second := rng.Intn(10)
+	microsecond := rng.Intn(1_000_000)
+	return t.day.Add(
+		time.Duration(hour)*time.Hour +
+			time.Duration(minute)*time.Minute +
+			time.Duration(second)*time.Second +
+			time.Duration(microsecond)*time.Microsecond,
+	)
+}
+
+func (t authTimeline) isolatedStart(hour int, rng *rand.Rand) time.Time {
+	minute := pickOne(rng, []int{
+		1 + rng.Intn(3),
+		14 + rng.Intn(3),
+		29 + rng.Intn(4),
+		45 + rng.Intn(4),
+	})
+	second := 10 + rng.Intn(40)
+	microsecond := rng.Intn(1_000_000)
+	return t.day.Add(
+		time.Duration(hour)*time.Hour +
+			time.Duration(minute)*time.Minute +
+			time.Duration(second)*time.Second +
+			time.Duration(microsecond)*time.Microsecond,
+	)
+}
+
+func randomAuthFailureHour(rng *rand.Rand) int {
+	switch roll := rng.Intn(100); {
+	case roll < 24:
+		return rng.Intn(6)
+	case roll < 42:
+		return 6 + rng.Intn(4)
+	case roll < 68:
+		return 10 + rng.Intn(8)
+	default:
+		return 18 + rng.Intn(6)
+	}
+}
+
+func randomAuthSuccessHour(rng *rand.Rand) int {
+	switch roll := rng.Intn(100); {
+	case roll < 12:
+		return 6 + rng.Intn(3)
+	case roll < 72:
+		return 9 + rng.Intn(8)
+	default:
+		return 17 + rng.Intn(5)
+	}
+}
+
+func randomAuthFailureBurstSize(rng *rand.Rand) int {
+	if rng.Intn(8) == 0 {
+		return 20 + rng.Intn(31)
+	}
+	return 2 + rng.Intn(5)
+}
+
+func authFailureMethod(user string) string {
+	if containsString(authServiceUsers, user) {
+		return "publickey"
+	}
+	return "password"
+}
+
+func authSuccessMethod(user string, rng *rand.Rand) string {
+	if containsString(authServiceUsers, user) {
+		return "publickey"
+	}
+	if containsString(authMFAUsers, user) && rng.Intn(5) == 0 {
+		return "keyboard-interactive/pam"
+	}
+	if rng.Intn(4) == 0 {
+		return "publickey"
+	}
+	return "password"
+}
+
+func authBurstIPs(rng *rand.Rand, attempts int) []string {
+	subnet := pickOne(rng, authBotSubnets)
+	count := 1
+	if attempts >= 6 {
+		count = 2
+	}
+	if attempts >= 18 {
+		count = 3
+	}
+	return uniqueAuthIPsFromSubnets(rng, count, [][3]int{subnet})
+}
+
+func uniqueAuthSourceIPs(rng *rand.Rand, count int) []string {
+	subnets := make([][3]int, 0, minInt(3, maxInt(1, count/6)))
+	for len(subnets) < cap(subnets) {
+		subnet := pickOne(rng, authBotSubnets)
+		if containsSubnet(subnets, subnet) {
+			continue
+		}
+		subnets = append(subnets, subnet)
+	}
+	if len(subnets) == 0 {
+		subnets = append(subnets, pickOne(rng, authBotSubnets))
+	}
+	return uniqueAuthIPsFromSubnets(rng, count, subnets)
+}
+
+func uniqueAuthIPsFromSubnets(rng *rand.Rand, count int, subnets [][3]int) []string {
+	out := make([]string, 0, count)
+	seen := make(map[string]struct{}, count)
+	for len(out) < count {
+		ip := randomAuthIPFromSubnet(pickOne(rng, subnets), rng)
+		if _, ok := seen[ip]; ok {
+			continue
+		}
+		seen[ip] = struct{}{}
+		out = append(out, ip)
+	}
+	return out
+}
+
+func randomAuthIPFromSubnet(subnet [3]int, rng *rand.Rand) string {
+	return fmt.Sprintf("%d.%d.%d.%d", subnet[0], subnet[1], subnet[2], 1+rng.Intn(253))
+}
+
+func randomClientPort(rng *rand.Rand) int {
+	return 20000 + rng.Intn(40000)
+}
+
+func newAuthRecord(timestamp time.Time, program string, pid int, message string) authRecord {
+	return authRecord{
+		Timestamp: timestamp,
+		Host:      scenarioHostname(),
+		Program:   program,
+		PID:       pid,
+		Message:   message,
+	}
+}
+
+func newSyslogTimeline(day time.Time, rng *rand.Rand) syslogTimeline {
+	timeline := syslogTimeline{day: day}
+	for hour := 0; hour < 24; hour++ {
+		clusterCount := 1 + rng.Intn(3)
+		centers := make([]int, 0, clusterCount)
+		minute := rng.Intn(12)
+		for i := 0; i < clusterCount; i++ {
+			minute += 8 + rng.Intn(18)
+			if minute > 57 {
+				break
+			}
+			centers = append(centers, minute)
+		}
+		if len(centers) == 0 {
+			centers = append(centers, 10+rng.Intn(40))
+		}
+		timeline.minuteClusters[hour] = centers
+	}
+	return timeline
+}
+
+func (t syslogTimeline) randomTimestamp(rng *rand.Rand) time.Time {
+	return t.timestampInHour(weightedSyslogHour(rng), rng)
+}
+
+func (t syslogTimeline) timestampInHour(hour int, rng *rand.Rand) time.Time {
+	center := pickOne(rng, t.minuteClusters[hour])
+	minute := clampInt(center+(rng.Intn(7)-rng.Intn(7)), 0, 59)
+	if rng.Intn(12) == 0 {
+		minute = clampInt(minute+(rng.Intn(18)-rng.Intn(18)), 0, 59)
+	}
+	second := clampInt(rng.Intn(60)+(rng.Intn(11)-rng.Intn(11)), 0, 59)
+	microsecond := rng.Intn(1_000_000)
+	return t.day.Add(
+		time.Duration(hour)*time.Hour +
+			time.Duration(minute)*time.Minute +
+			time.Duration(second)*time.Second +
+			time.Duration(microsecond)*time.Microsecond,
+	)
 }
 
 func randomTimestamp(day time.Time, rng *rand.Rand) time.Time {
@@ -918,6 +2236,21 @@ func withinHour(day time.Time, hour int, rng *rand.Rand) time.Time {
 
 func hourWindow(hour int) string {
 	return fmt.Sprintf("%02d:00-%02d:59", hour, hour)
+}
+
+func weightedSyslogHour(rng *rand.Rand) int {
+	switch roll := rng.Intn(100); {
+	case roll < 10:
+		return rng.Intn(6)
+	case roll < 25:
+		return 6 + rng.Intn(4)
+	case roll < 78:
+		return 10 + rng.Intn(8)
+	case roll < 92:
+		return 18 + rng.Intn(4)
+	default:
+		return 22 + rng.Intn(2)
+	}
 }
 
 func randomPathUnderPrefix(prefix string, rng *rand.Rand) string {
@@ -999,14 +2332,176 @@ func splitTotal(total, parts, minChunk int, rng *rand.Rand) []int {
 	return out
 }
 
+func authValidUsers() []string {
+	users := append([]string(nil), authUsers...)
+	users = append(users, authServiceUsers...)
+	users = append(users, "root")
+	return users
+}
+
 func shuffleStrings(rng *rand.Rand, values []string) {
 	rng.Shuffle(len(values), func(i, j int) {
 		values[i], values[j] = values[j], values[i]
 	})
 }
 
+func scenarioHostname() string {
+	scenarioHostOnce.Do(func() {
+		host, err := os.Hostname()
+		host = strings.TrimSpace(host)
+		if err != nil || host == "" {
+			scenarioHost = "lab-vm"
+			return
+		}
+		scenarioHost = host
+	})
+	return scenarioHost
+}
+
+func authPID(program string, rng *rand.Rand) int {
+	switch program {
+	case "systemd-logind":
+		return 700 + rng.Intn(800)
+	case "sshd":
+		return 1000 + rng.Intn(8000)
+	default:
+		return 1000 + rng.Intn(8000)
+	}
+}
+
+func syslogPID(program string, rng *rand.Rand) int {
+	switch program {
+	case "kernel":
+		return 0
+	case "systemd":
+		return 1
+	case "dhclient":
+		return 500 + rng.Intn(300)
+	case "CRON":
+		return 1800 + rng.Intn(400)
+	case "nginx":
+		return 800 + rng.Intn(600)
+	case "postgres":
+		return 1200 + rng.Intn(1500)
+	case "haproxy":
+		return 1000 + rng.Intn(500)
+	case "redis":
+		return 900 + rng.Intn(500)
+	case "backup-agent":
+		return 2000 + rng.Intn(1500)
+	case "app-worker":
+		return 3000 + rng.Intn(2500)
+	case "sudo":
+		return 4000 + rng.Intn(3000)
+	default:
+		return 1000 + rng.Intn(8000)
+	}
+}
+
 func pickOne[T any](rng *rand.Rand, values []T) T {
 	return values[rng.Intn(len(values))]
+}
+
+type weightedString struct {
+	Value  string
+	Weight int
+}
+
+type weightedStrings []weightedString
+
+type weightedInt struct {
+	Value  int
+	Weight int
+}
+
+type weightedInts []weightedInt
+
+func pickWeightedString(rng *rand.Rand, values weightedStrings) string {
+	total := 0
+	for _, value := range values {
+		total += value.Weight
+	}
+	roll := rng.Intn(total)
+	for _, value := range values {
+		roll -= value.Weight
+		if roll < 0 {
+			return value.Value
+		}
+	}
+	return values[len(values)-1].Value
+}
+
+func pickWeightedInt(rng *rand.Rand, values weightedInts) int {
+	total := 0
+	for _, value := range values {
+		total += value.Weight
+	}
+	roll := rng.Intn(total)
+	for _, value := range values {
+		roll -= value.Weight
+		if roll < 0 {
+			return value.Value
+		}
+	}
+	return values[len(values)-1].Value
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
+}
+
+func containsSubnet(values [][3]int, target [3]int) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
+}
+
+func stableRangeForString(value string, low, high int) int {
+	if high <= low {
+		return low
+	}
+	span := high - low + 1
+	return low + (stringChecksum(value) % span)
+}
+
+func stringChecksum(value string) int {
+	sum := 0
+	for i, r := range value {
+		sum += (i + 1) * int(r)
+	}
+	return sum
+}
+
+func defaultString(value, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func clampInt(value, low, high int) int {
+	if value < low {
+		return low
+	}
+	if value > high {
+		return high
+	}
+	return value
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func minInt(a, b int) int {

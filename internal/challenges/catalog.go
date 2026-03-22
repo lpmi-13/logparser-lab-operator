@@ -100,6 +100,11 @@ var catalog = []Activity{
 		SuggestedTools: []string{"grep", "awk", "sort", "head"},
 	},
 	{
+		ID:             "nginx-top-extension",
+		Title:          "Find The Top File Extension",
+		SuggestedTools: []string{"grep", "awk", "sed", "sort", "uniq", "head"},
+	},
+	{
 		ID:             "ssh-top-failed-user",
 		Title:          "Find The Most Targeted Username",
 		SuggestedTools: []string{"grep", "awk", "sed", "sort", "uniq", "head"},
