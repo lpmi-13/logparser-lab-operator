@@ -22,23 +22,99 @@ var (
 		"/exports/",
 		"/app/",
 	}
-	httpMethods  = []string{"GET", "POST", "PUT", "PATCH", "DELETE"}
-	httpStatuses = []int{200, 201, 204, 301, 302, 304, 400, 401, 403, 404, 409, 429, 500, 502, 503}
-	userAgents   = []string{
-		"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0 Safari/537.36",
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+	httpMethods             = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"}
+	httpStatuses            = []int{200, 201, 204, 301, 302, 304, 400, 401, 403, 404, 409, 429, 500, 502, 503}
+	apacheBrowserUserAgents = []string{
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0",
+		"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+		"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+		"Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+	}
+	apacheLegacyUserAgents = []string{
+		"Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko",
+		"Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0",
+		"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36",
+	}
+	apacheCLIUserAgents = []string{
 		"curl/8.7.1",
-		"python-requests/2.32.3",
-		"k6/0.49.0 (https://k6.io/)",
+		"curl/7.68.0",
+		"Wget/1.21.4 (linux-gnu)",
+		"python-requests/2.31.0",
 		"Go-http-client/1.1",
 	}
-	referrers = []string{
+	apacheBotUserAgents = []string{
+		"Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+		"Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
+	}
+	apacheScannerUserAgents = []string{
+		"Nikto/2.5.0",
+		"Nmap Scripting Engine",
+		"Mozilla/5.0 zgrab/0.x",
+	}
+	apacheTopUserAgentCandidates = []string{
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0",
+		"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+		"Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko",
+		"Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)",
+		"curl/8.7.1",
+		"curl/7.68.0",
+		"Wget/1.21.4 (linux-gnu)",
+		"python-requests/2.31.0",
+	}
+	apacheInternalReferrers = []string{
 		"-",
 		"https://portal.example.com/dashboard",
 		"https://portal.example.com/reports",
-		"https://search.example.net/?q=log+lab",
-		"https://docs.example.org/getting-started",
+		"https://portal.example.com/downloads",
+		"https://docs.example.org/legacy",
+	}
+	apacheSearchReferrers = []string{
+		"https://www.google.com/search?q=apache+directory+listing",
+		"https://search.example.net/?q=legacy+apache+cgi",
+		"https://www.bing.com/search?q=apache+mod_ssl+ubuntu",
+	}
+	apacheSuspiciousReferrers = []string{
+		"http://traffic.example-spam.invalid/hit",
+		"http://adult-links.example-bad.invalid/gallery",
+		"http://bonus-seo.example-bad.invalid/offer",
+	}
+	apacheCGIPaths = []string{
+		"/cgi-bin/status.cgi",
+		"/cgi-bin/printenv.pl",
+		"/cgi-bin/report.pl",
+		"/cgi-bin/healthcheck.cgi",
+	}
+	apacheScannerPaths = []string{
+		"/.htaccess",
+		"/.htpasswd",
+		"/.htgroups",
+	}
+	apachePagePaths = []string{
+		"/",
+		"/index.html",
+		"/manual/",
+		"/manual/en/mod/mod_ssl.html",
+		"/server-status?auto",
+	}
+	apacheKeepAliveValues = []string{
+		"timeout=5, max=100",
+		"timeout=5, max=75",
+		"timeout=5, max=50",
+		"timeout=15, max=100",
+	}
+	apacheRemoteUsers = []string{
+		"alice", "bob", "carol", "dana", "ops", "admin", "deploy", "backup", "svc-ci",
+	}
+	apacheTLS13Ciphers = []string{
+		"TLS_AES_256_GCM_SHA384",
+		"TLS_CHACHA20_POLY1305_SHA256",
+		"TLS_AES_128_GCM_SHA256",
+	}
+	apacheTLS12Ciphers = []string{
+		"ECDHE-RSA-AES128-GCM-SHA256",
+		"ECDHE-RSA-AES256-GCM-SHA384",
+		"ECDHE-ECDSA-AES128-GCM-SHA256",
 	}
 	downloadLeaves = map[string][]string{
 		"/downloads/": {
@@ -222,13 +298,20 @@ var (
 
 type accessRecord struct {
 	Timestamp            time.Time
+	VHost                string
 	IP                   string
+	RemoteUser           string
 	Method               string
 	Path                 string
 	Status               int
 	Bytes                int
 	Referrer             string
 	UserAgent            string
+	ServerHeader         string
+	RequestDurationMicro int
+	KeepAlive            string
+	SSLProtocol          string
+	SSLCipher            string
 	Protocol             string
 	RequestLength        int
 	RequestTime          float64
@@ -323,30 +406,28 @@ func prepareApacheUniqueIPs(activity Activity, seed int64) (Scenario, error) {
 	for _, ip := range relevantIPs {
 		repeats := 1 + rng.Intn(4)
 		for range repeats {
-			records = append(records, accessRecord{
-				Timestamp: withinHour(day, hour, rng),
-				IP:        ip,
-				Method:    pickOne(rng, []string{"GET", "POST"}),
-				Path:      randomPathUnderPrefix(prefix, rng),
-				Status:    pickOne(rng, []int{200, 201, 204, 302}),
-				Bytes:     200 + rng.Intn(4800),
-				Referrer:  pickOne(rng, referrers),
-				UserAgent: pickOne(rng, userAgents),
-			})
+			path := randomPathUnderPrefix(prefix, rng)
+			records = append(records, buildApacheRecord(
+				withinHour(day, hour, rng),
+				ip,
+				apacheMethodForPath(path, rng),
+				path,
+				pickOne(rng, []int{200, 201, 204, 302}),
+				rng,
+			))
 		}
 	}
 
 	for len(records) < uniqueCount*5 {
-		records = append(records, accessRecord{
-			Timestamp: withinHour(day, hour, rng),
-			IP:        pickOne(rng, relevantIPs),
-			Method:    pickOne(rng, []string{"GET", "POST"}),
-			Path:      randomPathUnderPrefix(prefix, rng),
-			Status:    pickOne(rng, []int{200, 200, 201, 204, 304}),
-			Bytes:     200 + rng.Intn(4800),
-			Referrer:  pickOne(rng, referrers),
-			UserAgent: pickOne(rng, userAgents),
-		})
+		path := randomPathUnderPrefix(prefix, rng)
+		records = append(records, buildApacheRecord(
+			withinHour(day, hour, rng),
+			pickOne(rng, relevantIPs),
+			apacheMethodForPath(path, rng),
+			path,
+			pickOne(rng, []int{200, 200, 201, 204, 304}),
+			rng,
+		))
 	}
 
 	for len(records) < DefaultScenarioLineCount {
@@ -378,16 +459,15 @@ func prepareApacheTopIP(activity Activity, seed int64) (Scenario, error) {
 
 	for i, ip := range targetIPs {
 		for range counts[i] {
-			records = append(records, accessRecord{
-				Timestamp: withinHour(day, hour, rng),
-				IP:        ip,
-				Method:    pickOne(rng, httpMethods),
-				Path:      randomPathUnderPrefix(pickOne(rng, accessPrefixes), rng),
-				Status:    status,
-				Bytes:     250 + rng.Intn(9000),
-				Referrer:  pickOne(rng, referrers),
-				UserAgent: pickOne(rng, userAgents),
-			})
+			path := randomPathUnderPrefix(pickOne(rng, accessPrefixes), rng)
+			records = append(records, buildApacheRecord(
+				withinHour(day, hour, rng),
+				ip,
+				apacheMethodForPath(path, rng),
+				path,
+				status,
+				rng,
+			))
 		}
 	}
 
@@ -419,30 +499,28 @@ func prepareApacheStatusUniqueIPs(activity Activity, seed int64) (Scenario, erro
 
 	for _, ip := range relevantIPs {
 		for range 1 + rng.Intn(5) {
-			records = append(records, accessRecord{
-				Timestamp: withinHour(day, hour, rng),
-				IP:        ip,
-				Method:    pickOne(rng, []string{"GET", "POST"}),
-				Path:      randomPathUnderPrefix(prefix, rng),
-				Status:    status,
-				Bytes:     0,
-				Referrer:  pickOne(rng, referrers),
-				UserAgent: pickOne(rng, userAgents),
-			})
+			path := randomPathUnderPrefix(prefix, rng)
+			records = append(records, buildApacheRecord(
+				withinHour(day, hour, rng),
+				ip,
+				apacheMethodForPath(path, rng),
+				path,
+				status,
+				rng,
+			))
 		}
 	}
 
 	for len(records) < uniqueCount*6 {
-		records = append(records, accessRecord{
-			Timestamp: withinHour(day, hour, rng),
-			IP:        pickOne(rng, relevantIPs),
-			Method:    pickOne(rng, []string{"GET", "POST"}),
-			Path:      randomPathUnderPrefix(prefix, rng),
-			Status:    status,
-			Bytes:     0,
-			Referrer:  pickOne(rng, referrers),
-			UserAgent: pickOne(rng, userAgents),
-		})
+		path := randomPathUnderPrefix(prefix, rng)
+		records = append(records, buildApacheRecord(
+			withinHour(day, hour, rng),
+			pickOne(rng, relevantIPs),
+			apacheMethodForPath(path, rng),
+			path,
+			status,
+			rng,
+		))
 	}
 
 	for len(records) < DefaultScenarioLineCount {
@@ -501,16 +579,14 @@ func prepareApacheTopDownloads(activity Activity, seed int64) (Scenario, error) 
 
 	for i, path := range paths {
 		for range counts[i] {
-			records = append(records, accessRecord{
-				Timestamp: withinHour(day, hour, rng),
-				IP:        pickOne(rng, ipPool),
-				Method:    "GET",
-				Path:      path,
-				Status:    pickOne(rng, []int{200, 200, 206, 304}),
-				Bytes:     700 + rng.Intn(180000),
-				Referrer:  pickOne(rng, referrers),
-				UserAgent: pickOne(rng, userAgents),
-			})
+			records = append(records, buildApacheRecord(
+				withinHour(day, hour, rng),
+				pickOne(rng, ipPool),
+				"GET",
+				path,
+				pickOne(rng, []int{200, 200, 206, 304}),
+				rng,
+			))
 		}
 	}
 
@@ -542,7 +618,7 @@ func prepareApacheTopUserAgent(activity Activity, seed int64) (Scenario, error) 
 	hour := rng.Intn(24)
 	method := pickOne(rng, []string{"GET", "POST"})
 	prefix := pickOne(rng, []string{"/api/v1/", "/app/", "/billing/", "/reports/"})
-	uas := append([]string(nil), userAgents...)
+	uas := append([]string(nil), apacheTopUserAgentCandidates...)
 	shuffleStrings(rng, uas)
 	targetUA := uas[0]
 	counts := []int{104 + rng.Intn(18), 83 + rng.Intn(12), 61 + rng.Intn(10), 44 + rng.Intn(8)}
@@ -551,16 +627,21 @@ func prepareApacheTopUserAgent(activity Activity, seed int64) (Scenario, error) 
 
 	for i := range counts {
 		for range counts[i] {
-			records = append(records, accessRecord{
-				Timestamp: withinHour(day, hour, rng),
-				IP:        pickOne(rng, ipPool),
-				Method:    method,
-				Path:      randomPathUnderPrefix(prefix, rng),
-				Status:    pickOne(rng, []int{200, 200, 201, 304}),
-				Bytes:     180 + rng.Intn(6400),
-				Referrer:  pickOne(rng, referrers),
-				UserAgent: uas[i],
-			})
+			path := randomPathUnderPrefix(prefix, rng)
+			record := buildApacheRecord(
+				withinHour(day, hour, rng),
+				pickOne(rng, ipPool),
+				method,
+				path,
+				pickOne(rng, []int{200, 200, 201, 304}),
+				rng,
+			)
+			record.UserAgent = uas[i]
+			record.Referrer = apacheReferrer(apachePathCategory(path), path, record.UserAgent, rng)
+			record.SSLProtocol, record.SSLCipher = apacheSSLDetails(apachePathCategory(path), path, record.VHost, record.UserAgent, rng)
+			record.Protocol = apacheProtocol(record.SSLProtocol != "-", record.UserAgent, rng)
+			record.KeepAlive = apacheKeepAlive(record.Method, record.Protocol, rng)
+			records = append(records, record)
 		}
 	}
 
@@ -918,15 +999,23 @@ func newAccessScenario(activity Activity, logName, question, outputFormat, expec
 	lines := make([]string, len(records))
 	for i, record := range records {
 		lines[i] = fmt.Sprintf(
-			`%s - - [%s] "%s %s HTTP/1.1" %d %d "%s" "%s"`,
+			`%s %s - %s [%s] "%s %s %s" %d %d "%s" "%s" "%s" %d "%s" %s %s`,
+			defaultString(record.VHost, apacheDefaultVHost(record.Path)),
 			record.IP,
+			defaultString(record.RemoteUser, "-"),
 			record.Timestamp.Format("02/Jan/2006:15:04:05 -0700"),
 			record.Method,
 			record.Path,
+			defaultString(record.Protocol, "HTTP/1.1"),
 			record.Status,
 			record.Bytes,
-			record.Referrer,
-			record.UserAgent,
+			defaultString(record.Referrer, "-"),
+			defaultString(record.UserAgent, "-"),
+			defaultString(record.ServerHeader, "Apache/2.4.58 (Ubuntu)"),
+			record.RequestDurationMicro,
+			defaultString(record.KeepAlive, "-"),
+			defaultString(record.SSLProtocol, "-"),
+			defaultString(record.SSLCipher, "-"),
 		)
 	}
 	return Scenario{
@@ -1034,17 +1123,491 @@ func newSyslogScenario(activity Activity, logName, question, outputFormat, expec
 }
 
 func randomAccessRecord(day time.Time, rng *rand.Rand) accessRecord {
-	prefix := pickOne(rng, accessPrefixes)
+	path := randomApachePath(rng)
+	method := apacheMethodForPath(path, rng)
+	return buildApacheRecord(
+		randomTimestamp(day, rng),
+		randomApacheClientIPForPath(path, rng),
+		method,
+		path,
+		randomApacheStatus(path, method, rng),
+		rng,
+	)
+}
+
+func buildApacheRecord(timestamp time.Time, ip, method, path string, status int, rng *rand.Rand) accessRecord {
+	category := apachePathCategory(path)
+	vhost := apacheDefaultVHost(path)
+	userAgent := apacheUserAgent(category, method, rng)
+	referrer := apacheReferrer(category, path, userAgent, rng)
+	sslProtocol, sslCipher := apacheSSLDetails(category, path, vhost, userAgent, rng)
+	protocol := apacheProtocol(sslProtocol != "-", userAgent, rng)
+
 	return accessRecord{
-		Timestamp: randomTimestamp(day, rng),
-		IP:        randomPublicIP(rng),
-		Method:    pickOne(rng, httpMethods),
-		Path:      randomPathUnderPrefix(prefix, rng),
-		Status:    pickOne(rng, httpStatuses),
-		Bytes:     120 + rng.Intn(200000),
-		Referrer:  pickOne(rng, referrers),
-		UserAgent: pickOne(rng, userAgents),
+		Timestamp:            timestamp,
+		VHost:                vhost,
+		IP:                   ip,
+		RemoteUser:           apacheRemoteUser(category, path, method, status, rng),
+		Method:               method,
+		Path:                 path,
+		Status:               status,
+		Bytes:                apacheBodyBytes(path, status, method),
+		Referrer:             referrer,
+		UserAgent:            userAgent,
+		ServerHeader:         "Apache/2.4.58 (Ubuntu)",
+		RequestDurationMicro: apacheRequestDurationMicros(category, path, status, method, rng),
+		KeepAlive:            apacheKeepAlive(method, protocol, rng),
+		SSLProtocol:          sslProtocol,
+		SSLCipher:            sslCipher,
+		Protocol:             protocol,
 	}
+}
+
+func randomApachePath(rng *rand.Rand) string {
+	switch roll := rng.Intn(100); {
+	case roll < 14:
+		return randomPathUnderPrefix("/assets/", rng)
+	case roll < 29:
+		return randomPathUnderPrefix("/api/v1/", rng)
+	case roll < 38:
+		return randomPathUnderPrefix("/app/", rng)
+	case roll < 46:
+		return randomPathUnderPrefix("/billing/", rng)
+	case roll < 54:
+		return randomPathUnderPrefix("/admin/", rng)
+	case roll < 63:
+		return randomPathUnderPrefix("/downloads/", rng)
+	case roll < 69:
+		return randomPathUnderPrefix("/reports/", rng)
+	case roll < 74:
+		return "/downloads/"
+	case roll < 80:
+		return pickOne(rng, apacheCGIPaths)
+	case roll < 85:
+		return pickOne(rng, apacheScannerPaths)
+	default:
+		return pickOne(rng, apachePagePaths)
+	}
+}
+
+func apachePathCategory(path string) string {
+	basePath := accessPathWithoutQuery(path)
+	switch {
+	case basePath == "/downloads/" || basePath == "/reports/" || basePath == "/exports/":
+		return "download-index"
+	case strings.HasPrefix(basePath, "/downloads/"), strings.HasPrefix(basePath, "/reports/"), strings.HasPrefix(basePath, "/exports/"):
+		return "download"
+	case strings.HasPrefix(basePath, "/assets/"), strings.HasPrefix(basePath, "/icons/"):
+		return "asset"
+	case strings.HasPrefix(basePath, "/api/"), basePath == "/server-status":
+		return "api"
+	case strings.HasPrefix(basePath, "/billing/"):
+		return "billing"
+	case strings.HasPrefix(basePath, "/admin/"):
+		return "admin"
+	case strings.HasPrefix(basePath, "/app/"):
+		return "app"
+	case strings.HasPrefix(basePath, "/cgi-bin/"), strings.HasSuffix(basePath, ".cgi"), strings.HasSuffix(basePath, ".pl"):
+		return "cgi"
+	case basePath == "/.htaccess", basePath == "/.htpasswd", basePath == "/.htgroups":
+		return "scanner"
+	default:
+		return "page"
+	}
+}
+
+func apacheDefaultVHost(path string) string {
+	basePath := accessPathWithoutQuery(path)
+	switch {
+	case strings.HasPrefix(basePath, "/api/"), basePath == "/server-status":
+		return "api.example.com"
+	case strings.HasPrefix(basePath, "/billing/"), strings.HasPrefix(basePath, "/admin/"):
+		return "secure.example.com"
+	case strings.HasPrefix(basePath, "/downloads/"), basePath == "/downloads/":
+		return "downloads.example.com"
+	case strings.HasPrefix(basePath, "/reports/"), strings.HasPrefix(basePath, "/exports/"):
+		return "portal.example.com"
+	case strings.HasPrefix(basePath, "/cgi-bin/"), strings.HasPrefix(basePath, "/manual/"):
+		return "legacy.example.com"
+	case strings.HasPrefix(basePath, "/app/"):
+		return "app.example.com"
+	default:
+		return "www.example.com"
+	}
+}
+
+func apacheMethodForPath(path string, rng *rand.Rand) string {
+	switch apachePathCategory(path) {
+	case "asset":
+		return pickWeightedString(rng, weightedStrings{{"GET", 93}, {"HEAD", 6}, {"OPTIONS", 1}})
+	case "download":
+		return pickWeightedString(rng, weightedStrings{{"GET", 90}, {"HEAD", 7}, {"OPTIONS", 3}})
+	case "download-index":
+		return pickWeightedString(rng, weightedStrings{{"GET", 87}, {"HEAD", 8}, {"OPTIONS", 5}})
+	case "api":
+		return pickWeightedString(rng, weightedStrings{{"GET", 48}, {"POST", 33}, {"PUT", 5}, {"PATCH", 2}, {"DELETE", 1}, {"OPTIONS", 7}, {"HEAD", 4}})
+	case "billing":
+		return pickWeightedString(rng, weightedStrings{{"GET", 57}, {"POST", 24}, {"PUT", 4}, {"PATCH", 2}, {"DELETE", 1}, {"OPTIONS", 7}, {"HEAD", 5}})
+	case "admin":
+		return pickWeightedString(rng, weightedStrings{{"GET", 60}, {"POST", 18}, {"PATCH", 2}, {"DELETE", 1}, {"OPTIONS", 9}, {"HEAD", 10}})
+	case "cgi":
+		return pickWeightedString(rng, weightedStrings{{"GET", 80}, {"POST", 10}, {"OPTIONS", 4}, {"HEAD", 6}})
+	case "scanner":
+		return pickWeightedString(rng, weightedStrings{{"GET", 90}, {"HEAD", 6}, {"OPTIONS", 4}})
+	default:
+		return pickWeightedString(rng, weightedStrings{{"GET", 77}, {"POST", 11}, {"OPTIONS", 4}, {"HEAD", 8}})
+	}
+}
+
+func randomApacheStatus(path, method string, rng *rand.Rand) int {
+	basePath := accessPathWithoutQuery(path)
+	switch apachePathCategory(path) {
+	case "asset":
+		return pickWeightedInt(rng, weightedInts{{200, 72}, {304, 18}, {404, 6}, {403, 3}, {500, 1}})
+	case "download":
+		if method == "OPTIONS" {
+			return 204
+		}
+		return pickWeightedInt(rng, weightedInts{{200, 72}, {206, 10}, {304, 8}, {302, 3}, {404, 5}, {403, 2}})
+	case "download-index":
+		if method == "OPTIONS" {
+			return 204
+		}
+		return pickWeightedInt(rng, weightedInts{{200, 81}, {304, 7}, {403, 8}, {404, 4}})
+	case "api":
+		if method == "OPTIONS" {
+			return pickWeightedInt(rng, weightedInts{{204, 86}, {200, 14}})
+		}
+		if method == "HEAD" {
+			return pickWeightedInt(rng, weightedInts{{200, 74}, {304, 10}, {404, 8}, {429, 5}, {500, 3}})
+		}
+		if method == "POST" {
+			return pickWeightedInt(rng, weightedInts{{200, 58}, {201, 20}, {400, 5}, {401, 3}, {403, 3}, {404, 4}, {409, 2}, {429, 3}, {500, 1}, {503, 1}})
+		}
+		if method == "PUT" || method == "PATCH" || method == "DELETE" {
+			return pickWeightedInt(rng, weightedInts{{200, 54}, {204, 18}, {400, 5}, {401, 3}, {403, 4}, {404, 5}, {409, 2}, {429, 4}, {500, 3}, {503, 2}})
+		}
+		return pickWeightedInt(rng, weightedInts{{200, 70}, {204, 5}, {304, 6}, {400, 2}, {401, 2}, {403, 2}, {404, 6}, {429, 3}, {500, 2}, {503, 2}})
+	case "billing":
+		if method == "OPTIONS" {
+			return 204
+		}
+		return pickWeightedInt(rng, weightedInts{{200, 61}, {201, 7}, {302, 10}, {304, 5}, {401, 4}, {403, 4}, {404, 4}, {429, 2}, {500, 2}, {503, 1}})
+	case "admin":
+		if method == "OPTIONS" {
+			return 204
+		}
+		return pickWeightedInt(rng, weightedInts{{200, 54}, {302, 18}, {401, 8}, {403, 12}, {404, 4}, {429, 2}, {500, 1}, {503, 1}})
+	case "cgi":
+		if method == "OPTIONS" {
+			return 204
+		}
+		return pickWeightedInt(rng, weightedInts{{200, 69}, {304, 5}, {403, 6}, {404, 8}, {500, 12}})
+	case "scanner":
+		if basePath == "/.htaccess" || basePath == "/.htpasswd" {
+			return pickWeightedInt(rng, weightedInts{{403, 83}, {404, 12}, {400, 5}})
+		}
+		return pickWeightedInt(rng, weightedInts{{403, 62}, {404, 26}, {400, 8}, {500, 4}})
+	default:
+		if method == "OPTIONS" {
+			return 204
+		}
+		return pickWeightedInt(rng, weightedInts{{200, 67}, {301, 10}, {302, 8}, {304, 8}, {403, 2}, {404, 3}, {500, 2}})
+	}
+}
+
+func apacheUserAgent(category, method string, rng *rand.Rand) string {
+	switch category {
+	case "scanner":
+		if rng.Intn(100) < 65 {
+			return pickOne(rng, apacheScannerUserAgents)
+		}
+		return pickOne(rng, apacheLegacyUserAgents)
+	case "cgi":
+		switch roll := rng.Intn(100); {
+		case roll < 42:
+			return pickOne(rng, apacheCLIUserAgents)
+		case roll < 70:
+			return pickOne(rng, apacheLegacyUserAgents)
+		case roll < 88:
+			return pickOne(rng, apacheBrowserUserAgents)
+		default:
+			return pickOne(rng, apacheBotUserAgents)
+		}
+	case "api":
+		switch roll := rng.Intn(100); {
+		case roll < 28:
+			return pickOne(rng, apacheBrowserUserAgents)
+		case roll < 54:
+			return pickOne(rng, apacheCLIUserAgents)
+		case roll < 82:
+			return pickOne(rng, apacheLegacyUserAgents)
+		default:
+			return pickOne(rng, apacheBotUserAgents)
+		}
+	default:
+		switch roll := rng.Intn(100); {
+		case roll < 30:
+			return pickOne(rng, apacheBrowserUserAgents)
+		case roll < 58:
+			return pickOne(rng, apacheLegacyUserAgents)
+		case roll < 82:
+			return pickOne(rng, apacheCLIUserAgents)
+		default:
+			return pickOne(rng, apacheBotUserAgents)
+		}
+	}
+}
+
+func apacheReferrer(category, path, userAgent string, rng *rand.Rand) string {
+	if category == "scanner" || strings.Contains(userAgent, "bot") {
+		return "-"
+	}
+	if strings.HasPrefix(userAgent, "curl/") || strings.HasPrefix(userAgent, "Wget/") || strings.HasPrefix(userAgent, "Go-http-client") || strings.HasPrefix(userAgent, "python-requests") {
+		switch roll := rng.Intn(100); {
+		case roll < 76:
+			return "-"
+		case roll < 92:
+			return pickOne(rng, apacheInternalReferrers)
+		default:
+			return pickOne(rng, apacheSuspiciousReferrers)
+		}
+	}
+
+	switch category {
+	case "download", "download-index", "cgi":
+		switch roll := rng.Intn(100); {
+		case roll < 24:
+			return "-"
+		case roll < 58:
+			return pickOne(rng, apacheInternalReferrers)
+		case roll < 78:
+			return pickOne(rng, apacheSearchReferrers)
+		default:
+			return pickOne(rng, apacheSuspiciousReferrers)
+		}
+	case "admin", "billing", "api", "app":
+		switch roll := rng.Intn(100); {
+		case roll < 34:
+			return "-"
+		case roll < 82:
+			return pickOne(rng, apacheInternalReferrers)
+		case roll < 92:
+			return pickOne(rng, apacheSearchReferrers)
+		default:
+			return pickOne(rng, apacheSuspiciousReferrers)
+		}
+	default:
+		switch roll := rng.Intn(100); {
+		case roll < 28:
+			return "-"
+		case roll < 56:
+			return pickOne(rng, apacheSearchReferrers)
+		case roll < 78:
+			return pickOne(rng, apacheInternalReferrers)
+		default:
+			return pickOne(rng, apacheSuspiciousReferrers)
+		}
+	}
+}
+
+func apacheRemoteUser(category, path, method string, status int, rng *rand.Rand) string {
+	switch category {
+	case "admin", "billing":
+		if status == 401 || status == 403 {
+			return "-"
+		}
+		if rng.Intn(100) < 78 {
+			return pickOne(rng, apacheRemoteUsers)
+		}
+	case "api":
+		if method != "GET" && method != "HEAD" && status != 401 && status != 403 && status < 500 && rng.Intn(100) < 18 {
+			return pickOne(rng, []string{"deploy", "backup", "svc-ci"})
+		}
+	case "app":
+		if status/100 == 2 && rng.Intn(100) < 14 {
+			return pickOne(rng, apacheRemoteUsers[:6])
+		}
+	case "download":
+		if strings.HasPrefix(accessPathWithoutQuery(path), "/reports/") && status/100 == 2 && rng.Intn(100) < 12 {
+			return pickOne(rng, apacheRemoteUsers[:6])
+		}
+	}
+	return "-"
+}
+
+func apacheSSLDetails(category, path, vhost, userAgent string, rng *rand.Rand) (string, string) {
+	secureChance := 68
+	switch category {
+	case "admin", "billing":
+		secureChance = 98
+	case "api":
+		secureChance = 92
+	case "download", "download-index", "app":
+		secureChance = 84
+	case "cgi":
+		secureChance = 38
+	case "scanner":
+		secureChance = 28
+	}
+	if vhost == "downloads.example.com" || vhost == "portal.example.com" {
+		secureChance = maxInt(secureChance, 82)
+	}
+	if strings.Contains(userAgent, "MSIE 8.0") {
+		secureChance -= 24
+	} else if strings.Contains(userAgent, "Trident/7.0") || strings.Contains(userAgent, "Firefox/102") || strings.Contains(userAgent, "Chrome/49") {
+		secureChance -= 8
+	}
+	if rng.Intn(100) >= clampInt(secureChance, 0, 100) {
+		return "-", "-"
+	}
+
+	if strings.Contains(userAgent, "MSIE 8.0") || strings.Contains(userAgent, "Trident/7.0") || strings.Contains(userAgent, "Firefox/102") || strings.Contains(userAgent, "Chrome/49") || category == "cgi" {
+		if rng.Intn(100) < 72 {
+			return "TLSv1.2", pickOne(rng, apacheTLS12Ciphers)
+		}
+		return "TLSv1.3", pickOne(rng, apacheTLS13Ciphers)
+	}
+	if rng.Intn(100) < 62 {
+		return "TLSv1.3", pickOne(rng, apacheTLS13Ciphers)
+	}
+	return "TLSv1.2", pickOne(rng, apacheTLS12Ciphers)
+}
+
+func apacheProtocol(secure bool, userAgent string, rng *rand.Rand) string {
+	if !secure {
+		return "HTTP/1.1"
+	}
+	if strings.Contains(userAgent, "MSIE 8.0") || strings.Contains(userAgent, "Trident/7.0") || strings.Contains(userAgent, "Firefox/102") || strings.Contains(userAgent, "Chrome/49") {
+		return "HTTP/1.1"
+	}
+	if strings.HasPrefix(userAgent, "curl/8.") && rng.Intn(100) < 18 {
+		return "HTTP/2.0"
+	}
+	if strings.HasPrefix(userAgent, "Mozilla/5.0") && rng.Intn(100) < 24 {
+		return "HTTP/2.0"
+	}
+	return "HTTP/1.1"
+}
+
+func apacheKeepAlive(method, protocol string, rng *rand.Rand) string {
+	if protocol == "HTTP/2.0" {
+		return "-"
+	}
+	if method == "HEAD" || method == "OPTIONS" {
+		return "timeout=5, max=100"
+	}
+	return pickOne(rng, apacheKeepAliveValues)
+}
+
+func apacheBodyBytes(path string, status int, method string) int {
+	if status == 204 || status == 304 || method == "HEAD" {
+		return 0
+	}
+
+	basePath := accessPathWithoutQuery(path)
+	if status >= 400 {
+		switch apachePathCategory(path) {
+		case "scanner":
+			return stableRangeForString(basePath, 180, 420)
+		case "api":
+			return stableRangeForString(basePath, 180, 2600)
+		case "admin", "billing":
+			return stableRangeForString(basePath, 220, 4200)
+		case "cgi":
+			return stableRangeForString(basePath, 260, 1800)
+		default:
+			return stableRangeForString(basePath, 160, 2400)
+		}
+	}
+
+	switch apachePathCategory(path) {
+	case "asset":
+		return stableRangeForString(basePath, 800, 2_000_000)
+	case "download":
+		return stableRangeForString(basePath, 50_000, 25_000_000)
+	case "download-index":
+		return stableRangeForString(basePath, 12_000, 90_000)
+	case "api":
+		if method == "OPTIONS" {
+			return 0
+		}
+		return stableRangeForString(basePath, 180, 65_000)
+	case "billing":
+		return stableRangeForString(basePath, 700, 70_000)
+	case "admin", "app", "page":
+		return stableRangeForString(basePath, 4_000, 120_000)
+	case "cgi":
+		return stableRangeForString(basePath, 1_200, 9_000)
+	default:
+		return stableRangeForString(basePath, 512, 25_000)
+	}
+}
+
+func apacheRequestDurationMicros(category, path string, status int, method string, rng *rand.Rand) int {
+	minUs, maxUs := 2_000, 180_000
+	switch category {
+	case "asset":
+		minUs, maxUs = 1_000, 120_000
+	case "download":
+		minUs, maxUs = 35_000, 3_200_000
+	case "download-index":
+		minUs, maxUs = 12_000, 280_000
+	case "api":
+		minUs, maxUs = 2_000, 450_000
+	case "billing", "admin":
+		minUs, maxUs = 6_000, 620_000
+	case "cgi":
+		minUs, maxUs = 8_000, 740_000
+	case "scanner":
+		minUs, maxUs = 500, 48_000
+	case "app", "page":
+		minUs, maxUs = 4_000, 220_000
+	}
+	if status >= 500 {
+		maxUs += 350_000
+	}
+	if method == "HEAD" || method == "OPTIONS" {
+		maxUs = maxInt(minUs+1, maxUs/2)
+	}
+	base := stableRangeForString(method+":"+accessPathWithoutQuery(path), minUs, maxUs)
+	jitter := maxInt((maxUs-minUs)/10, 1)
+	return clampInt(base+(rng.Intn(jitter)-rng.Intn(jitter)), minUs, maxUs)
+}
+
+func randomApacheClientIPForPath(path string, rng *rand.Rand) string {
+	switch apachePathCategory(path) {
+	case "admin", "billing", "api":
+		if rng.Intn(100) < 18 {
+			return randomPrivateIP(rng)
+		}
+	case "scanner", "cgi":
+		if rng.Intn(100) < 76 {
+			return randomPublicIP(rng)
+		}
+		return randomApacheIPv6(rng)
+	}
+	return randomApacheClientIP(rng)
+}
+
+func randomApacheClientIP(rng *rand.Rand) string {
+	switch roll := rng.Intn(100); {
+	case roll < 67:
+		return randomPublicIP(rng)
+	case roll < 82:
+		return randomPrivateIP(rng)
+	default:
+		return randomApacheIPv6(rng)
+	}
+}
+
+func randomApacheIPv6(rng *rand.Rand) string {
+	return fmt.Sprintf(
+		"2001:db8:%x:%x::%x",
+		0x10+rng.Intn(0xef),
+		1+rng.Intn(0xfff),
+		1+rng.Intn(0xffff),
+	)
 }
 
 func randomNginxRecord(day time.Time, rng *rand.Rand) accessRecord {
